@@ -1,7 +1,7 @@
 // app/(app)/(tabs)/create-tag.tsx
 // TODO: ดู src/app/user/create-tag/page.tsx ฝั่งเว็บสำหรับ behavior เต็ม
 // Endpoints: GET /api/tags, POST /api/tags { name, color }, DELETE /api/tags/[id]
-// หมายเหตุ: Tag เป็น global ไม่ผูกกับ user คนใดคนหนึ่ง (ดู docs/API.md)
+// หมายเหตุ: Tag เป็นของแต่ละ user แล้ว (ไม่ใช่ global) — GET /api/tags คืนแค่ tag ของตัวเอง (ดู docs/API.md)
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function CreateTagScreen() {
