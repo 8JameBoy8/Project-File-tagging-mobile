@@ -1,6 +1,6 @@
 // app/(auth)/register.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuth, ApiError } from '@/context/AuthContext';
 import { apiFetch } from '@/lib/api';
@@ -9,7 +9,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
-  const [username, setUsername] = useState(''); // เก็บไว้ตั้งเป็น displayName หลัง register สำเร็จ
+  const [username, setUsername] = useState(''); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,7 +26,6 @@ export default function RegisterScreen() {
     try {
       await register(email, password);
       if (username.trim()) {
-        // ไม่ต้องรอ/ไม่ต้อง block การไปหน้าถัดไปถ้าพลาด (เหมือนฝั่งเว็บ)
         apiFetch('/api/profile', { method: 'PATCH', body: { displayName: username.trim() } }).catch(() => {});
       }
     } catch (e) {
@@ -37,42 +36,131 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      {/* เพิ่ม ScrollView เพื่อให้เลื่อนจอได้เวลาคีย์บอร์ดเด้งบังช่องกรอก */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          
+          {/* ไอคอนกลมๆ เปลี่ยนเป็นรูปกระดาษโน้ต หรือคน ให้ต่างจากหน้านิดนึง */}
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarIcon}>📝</Text> 
+          </View>
 
-      <TextField label="Username" placeholder="Your Username" value={username} onChangeText={setUsername} />
-      <TextField
-        label="Gmail"
-        placeholder="Example@gmail.com"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextField label="Password" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} />
-      <TextField
-        label="Confirm Password"
-        placeholder="••••••••"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
+          <Text style={styles.title}>REGISTER</Text>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+          <TextField label="Username" placeholder="Your Username" value={username} onChangeText={setUsername} />
+          <TextField
+            label="Gmail"
+            placeholder="Example@gmail.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextField label="Password" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} />
+          <TextField
+            label="Confirm Password"
+            placeholder="••••••••"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
 
-      <PrimaryButton title={submitting ? 'กำลังสมัครสมาชิก...' : 'Sign Up'} onPress={handleSubmit} loading={submitting} />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <View style={styles.linkRow}>
-        <Text>Already have an account? </Text>
-        <Link href="/(auth)/login">Login</Link>
-      </View>
-    </View>
+          <View style={styles.buttonWrapper}>
+            <PrimaryButton title={submitting ? 'กำลังสมัครสมาชิก...' : 'Sign Up'} onPress={handleSubmit} loading={submitting} />
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Link href="/(auth)/login" style={styles.link}>Login</Link>
+          </View>
+
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 14, backgroundColor: '#bce3f9' },
-  title: { fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  error: { color: '#dc2626', textAlign: 'center' },
-  linkRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 12 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#bce3f9' 
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    paddingTop: 50, 
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    position: "relative",
+    marginTop: 40, // เผื่อที่ให้ไอคอนด้านบนไม่โดนขอบจอตัดเวลาเลื่อน
+  },
+  avatarContainer: {
+    position: "absolute",
+    top: -40,
+    alignSelf: "center",
+    width: 80,
+    height: 80,
+    backgroundColor: "#e6fafe",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 4,
+    borderColor: "white",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  avatarIcon: {
+    fontSize: 40,
+  },
+  title: { 
+    fontSize: 24, 
+    fontWeight: '800', 
+    textAlign: 'center', 
+    marginBottom: 20,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  error: { 
+    color: '#dc2626', 
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  buttonWrapper: {
+    marginTop: 10,
+  },
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  footerText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  link: {
+    color: "#3b82f6",
+    fontSize: 14,
+    fontWeight: "500",
+  }
 });

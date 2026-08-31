@@ -1,7 +1,6 @@
 // app/(auth)/login.tsx
-// ตัวอย่างหน้าจอที่ต่อ API จริงครบวงจรแล้ว — ใช้ pattern นี้เป็นแบบตอนทำหน้าจออื่น
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuth, ApiError } from '@/context/AuthContext';
 import TextField from '@/components/TextField';
@@ -20,7 +19,6 @@ export default function LoginScreen() {
     try {
       await login(email, password);
       // ไม่ต้อง router.replace เอง — app/index.tsx จะ redirect ให้อัตโนมัติเมื่อ user state เปลี่ยน
-      // (ปกติจะ mount ใหม่ผ่าน useAuth ที่ฟังอยู่ระดับบนสุด)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'เข้าสู่ระบบไม่สำเร็จ');
     } finally {
@@ -29,40 +27,127 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <View style={styles.card}>
+        
+        {/* ไอคอนกลมๆ ด้านบน */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarIcon}>👤</Text>
+        </View>
 
-      <TextField
-        label="Gmail"
-        placeholder="Example@gmail.com"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextField
-        label="Password"
-        placeholder="••••••••"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <Text style={styles.title}>LOGIN</Text>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {/* ใช้ TextField ของเพื่อน */}
+        <TextField
+          label="Gmail"
+          placeholder="Example@gmail.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+        
+        {/* ใช้ TextField ของเพื่อน */}
+        <TextField
+          label="Password"
+          placeholder="••••••••"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <PrimaryButton title={submitting ? 'กำลังเข้าสู่ระบบ...' : 'Login'} onPress={handleSubmit} loading={submitting} />
+        {/* แสดง Error สีแดงถ้าล็อกอินพลาด */}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <View style={styles.linksRow}>
-        <Link href="/(auth)/register">Register?</Link>
-        <Link href="/(auth)/forgot-password">Forgot password</Link>
+        {/* ใช้ ปุ่มของเพื่อน */}
+        <View style={styles.buttonWrapper}>
+          <PrimaryButton 
+            title={submitting ? 'กำลังเข้าสู่ระบบ...' : 'Login'} 
+            onPress={handleSubmit} 
+            loading={submitting} 
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <Link href="/(auth)/register" style={styles.link}>Register?</Link>
+          <Link href="/(auth)/forgot-password" style={styles.link}>ลืมรหัสผ่าน</Link>
+        </View>
+
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 14, backgroundColor: '#bce3f9' },
-  title: { fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  error: { color: '#dc2626', textAlign: 'center' },
-  linksRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  container: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    padding: 24, 
+    backgroundColor: '#bce3f9' 
+  },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    paddingTop: 50, // เผื่อที่ให้ไอคอนกลมๆ
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    position: "relative",
+  },
+  avatarContainer: {
+    position: "absolute",
+    top: -40,
+    alignSelf: "center",
+    width: 80,
+    height: 80,
+    backgroundColor: "#e6fafe",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 4,
+    borderColor: "white",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  avatarIcon: {
+    fontSize: 40,
+  },
+  title: { 
+    fontSize: 24, 
+    fontWeight: '800', 
+    textAlign: 'center', 
+    marginBottom: 20,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  error: { 
+    color: '#dc2626', 
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  buttonWrapper: {
+    marginTop: 10,
+  },
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  link: {
+    color: "#3b82f6",
+    fontSize: 14,
+    fontWeight: "500",
+  }
 });
