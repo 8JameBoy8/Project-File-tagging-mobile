@@ -37,3 +37,43 @@ export type FileItem = {
 export type ApiErrorShape = {
   error: { code: string; message: string };
 };
+
+// ===== Admin (โซน (admin) เท่านั้น — ดู src/app/admin/* ฝั่งเว็บ) =====
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: 'USER' | 'ADMIN';
+  isVerified: boolean;
+  createdAt: string;
+  storageUsedBytes: number;
+  fileCount: number;
+  tags: string[]; // ชื่อ tag ทั้งหมดที่ user คนนี้เคยใช้ (รวมจากทุกไฟล์)
+  firstUploadAt: string | null;
+  lastUploadAt: string | null;
+};
+
+export type ModerationStatus =
+  | 'PENDING_SCAN'
+  | 'SCANNING'
+  | 'SCAN_FAILED'
+  | 'PENDING_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export type ModerationItem = {
+  id: string;
+  fileUrl: string;
+  fileName: string | null;
+  fileType: string | null;
+  fileSize: number | null;
+  tagIds: string | null; // JSON string ของ tag id array — parse เองก่อนใช้
+  status: ModerationStatus;
+  scanResult: string | null; // JSON string ดิบจาก Cloudmersive เก็บไว้เผื่อ debug/แสดงเหตุผล
+  uploadedBy: string;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  uploader: { id: string; displayName: string | null; email: string } | null;
+};
