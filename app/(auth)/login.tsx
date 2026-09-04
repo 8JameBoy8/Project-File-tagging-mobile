@@ -2,12 +2,13 @@
 // ตัวอย่างหน้าจอที่ต่อ API จริงครบวงจรแล้ว — ใช้ pattern นี้เป็นแบบตอนทำหน้าจออื่น
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuth, ApiError } from '@/context/AuthContext';
 import TextField from '@/components/TextField';
 import PrimaryButton from '@/components/PrimaryButton';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,8 +20,7 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       await login(email, password);
-      // ไม่ต้อง router.replace เอง — app/index.tsx จะ redirect ให้อัตโนมัติเมื่อ user state เปลี่ยน
-      // (ปกติจะ mount ใหม่ผ่าน useAuth ที่ฟังอยู่ระดับบนสุด)
+      router.replace('/');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'เข้าสู่ระบบไม่สำเร็จ');
     } finally {

@@ -1,13 +1,14 @@
 // app/(auth)/register.tsx
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuth, ApiError } from '@/context/AuthContext';
 import { apiFetch } from '@/lib/api';
 import TextField from '@/components/TextField';
 import PrimaryButton from '@/components/PrimaryButton';
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const { register } = useAuth();
   const [username, setUsername] = useState(''); // เก็บไว้ตั้งเป็น displayName หลัง register สำเร็จ
   const [email, setEmail] = useState('');
@@ -29,6 +30,7 @@ export default function RegisterScreen() {
         // ไม่ต้องรอ/ไม่ต้อง block การไปหน้าถัดไปถ้าพลาด (เหมือนฝั่งเว็บ)
         apiFetch('/api/profile', { method: 'PATCH', body: { displayName: username.trim() } }).catch(() => {});
       }
+      router.replace('/');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'สมัครสมาชิกไม่สำเร็จ');
     } finally {
