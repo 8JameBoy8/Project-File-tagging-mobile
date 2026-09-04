@@ -1,13 +1,69 @@
-// app/(admin)/(tabs)/_layout.tsx — แท็บหลัก 3 อัน เทียบเท่า AppShell.tsx ฝั่งเว็บ
-// (Home, Approve / Select, Setting) ดู src/components/AppShell.tsx ในโปรเจกต์เว็บ
-import { Tabs } from 'expo-router';
+import { Tabs } from "expo-router";
+import { Text, StyleSheet } from "react-native";
+
+function TabIcon({ text }: { text: string }) {
+  return <Text style={styles.icon}>{text}</Text>;
+}
 
 export default function AdminTabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
-      <Tabs.Screen name="home" options={{ title: 'Home' }} />
-      <Tabs.Screen name="approve" options={{ title: 'Approve / Select' }} />
-      <Tabs.Screen name="setting" options={{ title: 'Setting' }} />
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+
+        tabBarActiveTintColor: "#176B34",
+        tabBarInactiveTintColor: "#94A3B8",
+
+        tabBarStyle: {
+          height: 72,
+          paddingBottom: 10,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: "#E1E6E3",
+          backgroundColor: "#FFFFFF",
+        },
+
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon text={focused ? "⌂" : "⌂"} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="approve"
+        options={{
+          title: "Approve / Select",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon text={focused ? "✓" : "✓"} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="setting"
+        options={{
+          title: "Setting",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon text={focused ? "⚙" : "⚙"} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  icon: {
+    fontSize: 20,
+  },
+});
