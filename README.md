@@ -28,9 +28,9 @@ app/                        ← หน้าจอทั้งหมด (expo-ro
 ├── (app)/                   โซนที่ต้อง login แล้วเท่านั้น (เช็คใน _layout.tsx ของโซนนี้)
 │   ├── (tabs)/               แท็บหลัก 5 อัน เหมือน Topbar.tsx ฝั่งเว็บเป๊ะๆ
 │   │   ├── home.tsx            ✅ ทำงานจริง (ดึงไฟล์จาก API มาโชว์ list)
-│   │   ├── manage-tag.tsx      🚧 TODO
+│   │   ├── manage-tag.tsx      ✅ ทำงานจริงครบแล้ว (เลือก/แก้ไข/ลบแท็ก, เลือกไฟล์เข้าแท็ก, sort/filter)
 │   │   ├── upload.tsx          ✅ ทำงานจริงครบแล้ว
-│   │   ├── create-tag.tsx      🚧 TODO
+│   │   ├── create-tag.tsx      ✅ ทำงานจริงครบแล้ว
 │   │   └── setting.tsx         ✅ ทำงานจริงครบแล้ว
 │   ├── profile.tsx           ✅ ทำงานจริงครบแล้ว (เปลี่ยนรูป/ชื่อ, ดูพื้นที่จัดเก็บ)
 │   ├── change-password.tsx   ✅ ทำงานจริงครบแล้ว (เปลี่ยนรหัสผ่านตอน login อยู่ — คนละหน้ากับ
@@ -66,10 +66,11 @@ types/
 └── index.ts                  Type ตรงกับ shape ของ API (User, Tag, FileItem, AdminUser, ModerationItem)
 ```
 
-## ที่ยังไม่เสร็จ
+## ที่ยังไม่เสร็จ / ที่ควรรู้
 
-- **`(app)/(tabs)/manage-tag.tsx`** และ **`(app)/(tabs)/create-tag.tsx`** — ยังเป็น TODO placeholder อยู่ เปิดไฟล์ดู comment ด้านบนสำหรับ endpoint ที่ต้องใช้
+- ทุกหน้าจอในแอปมีให้ครบแล้ว ไม่มี TODO placeholder เหลืออยู่
 - **Forgot Password ใช้กับอีเมลจริงไม่ได้ชั่วคราว** — โค้ดเรียก endpoint ถูกต้องแล้ว แต่บริการส่งอีเมล (Resend) ฝั่ง backend ยังอยู่โหมด sandbox ส่งได้แค่ไปยังอีเมลของเจ้าของบัญชีเอง (รอทีมเว็บยืนยันโดเมนของตัวเองใน Resend dashboard — ไม่ใช่บั๊กของ mobile)
+- **`manage-tag.tsx`/`create-tag.tsx` เพิ่งเขียนเสร็จ ตรวจแค่ `tsc --noEmit` (ผ่าน 0 error) ยังไม่ได้ click-through บนอุปกรณ์จริง** — ทดสอบผ่าน `expo start --web` ในเครื่องนี้ไม่ได้ผล เพราะปุ่มแบบ RN `Pressable` กับ automation tool ของเบราว์เซอร์เข้ากันไม่ได้ (ปัญหาเครื่องมือทดสอบ ไม่เกี่ยวกับโค้ด) — ก่อนใช้งานจริงควรลองเปิดผ่าน Expo Go บนมือถือ/emulator สักรอบ โดยเฉพาะจุดที่โหลดรูปภาพที่ต้องแนบ token (`AuthedThumbnail` ใน manage-tag.tsx)
 
 ## กติกาที่ควรรักษาไว้ (กันไม่ให้แต่ละคนทำคนละแบบ)
 
