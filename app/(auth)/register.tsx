@@ -28,6 +28,7 @@ export default function RegisterScreen() {
       if (username.trim()) {
         apiFetch('/api/profile', { method: 'PATCH', body: { displayName: username.trim() } }).catch(() => {});
       }
+      // ไม่ต้อง router.replace เอง — app/(auth)/_layout.tsx เช็ค user แล้ว redirect ให้อัตโนมัติ
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'สมัครสมาชิกไม่สำเร็จ');
     } finally {

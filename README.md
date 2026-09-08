@@ -25,15 +25,23 @@ app/                        ← หน้าจอทั้งหมด (expo-ro
 │   ├── register.tsx          ✅ ทำงานจริงครบแล้ว
 │   ├── forgot-password.tsx   🚧 TODO — มี comment บอก flow ในไฟล์
 │   └── change-password.tsx   🚧 TODO
-└── (app)/                   โซนที่ต้อง login แล้วเท่านั้น (เช็คใน _layout.tsx ของโซนนี้)
-    ├── (tabs)/               แท็บหลัก 5 อัน เหมือน Topbar.tsx ฝั่งเว็บเป๊ะๆ
-    │   ├── home.tsx            ✅ ตัวอย่างทำงานจริง (ดึงไฟล์จาก API มาโชว์ list)
-    │   ├── manage-tag.tsx      🚧 TODO
-    │   ├── upload.tsx          🚧 TODO
-    │   ├── create-tag.tsx      🚧 TODO
-    │   └── setting.tsx         ✅ logout ทำงานจริง + ปุ่มไป profile/file-passwords
-    ├── profile.tsx           🚧 TODO (เข้าจากปุ่มในหน้า Setting ไม่ใช่แท็บ)
-    └── file-passwords.tsx    🚧 TODO (เข้าจากปุ่มในหน้า Setting ไม่ใช่แท็บ)
+├── (app)/                   โซนที่ต้อง login แล้วเท่านั้น (เช็คใน _layout.tsx ของโซนนี้)
+│   ├── (tabs)/               แท็บหลัก 5 อัน เหมือน Topbar.tsx ฝั่งเว็บเป๊ะๆ
+│   │   ├── home.tsx            ✅ ตัวอย่างทำงานจริง (ดึงไฟล์จาก API มาโชว์ list)
+│   │   ├── manage-tag.tsx      🚧 TODO
+│   │   ├── upload.tsx          🚧 TODO
+│   │   ├── create-tag.tsx      🚧 TODO
+│   │   └── setting.tsx         ✅ logout ทำงานจริง + ปุ่มไป profile/file-passwords
+│   ├── profile.tsx           🚧 TODO (เข้าจากปุ่มในหน้า Setting ไม่ใช่แท็บ)
+│   └── file-passwords.tsx    🚧 TODO (เข้าจากปุ่มในหน้า Setting ไม่ใช่แท็บ)
+└── (admin)/                 โซนของ role ADMIN เท่านั้น (เช็คใน _layout.tsx ของโซนนี้ — user ทั่วไป
+    │                         ที่พยายามเข้ามาจะโดนเด้งไป (app)/home อัตโนมัติ เทียบเท่า proxy.ts
+    │                         ที่กัน /admin/* ฝั่งเว็บ) หน้าเว็บต้นแบบเพิ่งต่อ API จริงเสร็จแล้ว
+    │                         ดูโครง UI จริงได้จาก src/app/admin/*/page.tsx ในโปรเจกต์เว็บ
+    └── (tabs)/               แท็บหลัก 3 อัน เหมือน AppShell.tsx ฝั่งเว็บ
+        ├── home.tsx            🚧 TODO — list user ทั้งหมด + ไฟล์ทุกคน, ลบ user ได้
+        ├── approve.tsx         🚧 TODO — คิวไฟล์ที่สแกนไวรัสแล้วไม่ชัวร์ว่าปลอดภัย รอ admin ตัดสิน
+        └── setting.tsx         🚧 TODO — จำนวน user ทั้งหมด, เปลี่ยนภาษา, logout
 
 components/                 UI ที่ใช้ซ้ำได้ (เพิ่มเติมได้เรื่อยๆ)
 ├── PrimaryButton.tsx         เทียบเท่า AuthButton.tsx ฝั่งเว็บ
@@ -48,7 +56,7 @@ lib/
 └── storage.ts                เก็บ JWT token แบบ secure (expo-secure-store)
 
 types/
-└── index.ts                  Type ตรงกับ shape ของ API (User, Tag, FileItem)
+└── index.ts                  Type ตรงกับ shape ของ API (User, Tag, FileItem, AdminUser, ModerationItem)
 ```
 
 ## กติกาที่ควรรักษาไว้ (กันไม่ให้แต่ละคนทำคนละแบบ)

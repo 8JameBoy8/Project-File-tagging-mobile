@@ -14,5 +14,6 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={user ? '/(app)/home' : '/(auth)/login'} />;
+  if (!user) return <Redirect href="/(auth)/login" />;
+  return <Redirect href={user.role === 'ADMIN' ? '/(admin)/(tabs)/home' : '/(app)/(tabs)/home'} />;
 }

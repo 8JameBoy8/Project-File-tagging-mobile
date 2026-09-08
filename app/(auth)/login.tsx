@@ -18,7 +18,8 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       await login(email, password);
-      // ไม่ต้อง router.replace เอง — app/index.tsx จะ redirect ให้อัตโนมัติเมื่อ user state เปลี่ยน
+      // ไม่ต้อง router.replace เอง — app/(auth)/_layout.tsx เช็ค user แล้ว redirect ให้อัตโนมัติ
+      // ทันทีที่ login สำเร็จ (เห็น user ไม่ null ก็เด้งออกจากโซน auth เอง)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'เข้าสู่ระบบไม่สำเร็จ');
     } finally {
