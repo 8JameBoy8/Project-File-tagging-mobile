@@ -16,16 +16,442 @@
 //   form.append('tags', JSON.stringify(selectedTagId ? [selectedTagId] : []));
 //   if (password) form.append('password', password);
 //   await apiFetch('/api/files', { method: 'POST', body: form }); // -> 202 { status, moderationItemId }
-import { View, Text, StyleSheet } from 'react-native';
+
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import { apiFetch, ApiError } from '@/lib/api';
+import type { Tag } from '@/types';
+import TextField from '@/components/TextField';
+import PrimaryButton from '@/components/PrimaryButton';
+
 
 export default function UploadScreen() {
+  // เก็บไฟล์ที่ผู้ใช้เลือก
+  const [file, setFile] = useState<any>(null);
+
+  // เก็บ ID ของ Tag ที่ผู้ใช้เลือก
+  const [selectedTagId, setSelectedTagId] =
+    useState<string | null>(null);
+
+  // เก็บ Password ที่ผู้ใช้กรอก
+  const [password, setPassword] = useState('');
+
+  // สถานะกำลังอัปโหลด (กันกดซ้ำ + โชว์ loading บนปุ่ม)
+  const [uploading, setUploading] = useState(false);
+
+  // Tag จริงของ user คนนี้ ดึงจาก GET /api/tags (คืนเป็น array ตรงๆ ไม่มี wrapper object)
+  const [tags, setTags] = useState<Tag[]>([]);
+
+  useEffect(() => {
+    apiFetch<Tag[]>('/api/tags')
+      .then(setTags)
+      .catch(() => {
+        // โหลด tag ไม่สำเร็จ — ปล่อยให้ list ว่างไปก่อน ไม่ block การอัปโหลดไฟล์แบบไม่ติด tag
+      });
+  }, []);
+
+  // เปิดตัวเลือกไฟล์จากเครื่อง
+  const pickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      // เก็บไฟล์ที่เลือกไว้ใน state
+      if (!result.canceled) {
+        setFile(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Pick file error:', error);
+
+      Alert.alert(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถเลือกไฟล์ได้'
+      );
+    }
+  };
+
+  // ลบไฟล์ที่เลือกออกจากหน้า
+  const removeFile = () => {
+    setFile(null);
+  };
+
+  // ส่งไฟล์ Tag และ Password ไปยัง POST /api/files
+  const handleConfirm = async () => {
+    if (!file) {
+      Alert.alert(
+        'แจ้งเตือน',
+        'กรุณาเลือกไฟล์ก่อน'
+      );
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // สร้าง FormData สำหรับส่งข้อมูลแบบ multipart/form-data
+      const form = new FormData();
+
+      // เพิ่มไฟล์สำหรับ React Native
+      form.append('file', {
+        uri: file.uri,
+        name: file.fileName || file.name,
+        type: file.mimeType || 'application/octet-stream',
+      } as any);
+
+      // ส่ง Tag เป็น JSON string array
+      form.append(
+        'tags',
+        JSON.stringify(
+          selectedTagId ? [selectedTagId] : []
+        )
+      );
+
+      // ส่ง Password เฉพาะเมื่อผู้ใช้กรอก
+      if (password) {
+        form.append('password', password);
+      }
+
+      // เรียก API เพื่ออัปโหลดไฟล์ — apiFetch คืนค่า JSON ที่ parse แล้วตรงๆ (ไม่มี .status)
+      // และจะ throw ApiError เองถ้า response ไม่ ok เลยแค่ไม่ throw ก็แปลว่าสำเร็จ (202 PENDING_SCAN)
+      await apiFetch('/api/files', {
+        method: 'POST',
+        body: form,
+      });
+
+      Alert.alert(
+        'Upload สำเร็จ',
+        'กำลังตรวจสอบไฟล์... ไฟล์จะเพิ่มให้อัตโนมัติในหน้า Home เมื่อตรวจสอบเสร็จ'
+      );
+      setFile(null);
+      setSelectedTagId(null);
+      setPassword('');
+    } catch (error) {
+      console.error('Upload error:', error);
+
+      Alert.alert(
+        'เกิดข้อผิดพลาด',
+        error instanceof ApiError ? error.message : 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>TODO: Upload screen — ดู comment ด้านบนของไฟล์นี้สำหรับวิธีอัปโหลด</Text>
-    </View>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.title}>
+        Import File
+      </Text>
+
+      {/* กดเพื่อเปิดตัวเลือกไฟล์ */}
+      <TouchableOpacity
+        style={styles.importBox}
+        onPress={pickFile}
+        activeOpacity={0.7}
+      >
+        <View style={styles.uploadIcon}>
+          <Text style={styles.uploadIconText}>
+            ↑
+          </Text>
+        </View>
+
+        <Text style={styles.importTitle}>
+          Import File
+        </Text>
+
+        <Text style={styles.importDescription}>
+          Tap to select a file from your device
+        </Text>
+      </TouchableOpacity>
+
+      {/* แสดงไฟล์ที่ผู้ใช้เลือก */}
+      {file && (
+        <View style={styles.fileSection}>
+          <Text style={styles.sectionTitle}>
+            Selected File
+          </Text>
+
+          <View style={styles.fileCard}>
+            <View style={styles.fileIcon}>
+              <Text style={styles.fileIconText}>
+                FILE
+              </Text>
+            </View>
+
+            <View style={styles.fileInfo}>
+              <Text
+                style={styles.fileName}
+                numberOfLines={1}
+              >
+                {file.name}
+              </Text>
+
+              <Text style={styles.fileType}>
+                {file.mimeType || 'Unknown type'}
+              </Text>
+            </View>
+
+            {/* ปุ่มลบไฟล์ */}
+            <TouchableOpacity
+              onPress={removeFile}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteText}>
+                ×
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* เลือก Tag */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          Tag
+        </Text>
+
+        <View style={styles.tagContainer}>
+          {tags.map((tag) => (
+            <TouchableOpacity
+              key={tag.id}
+              style={[
+                styles.tag,
+                selectedTagId === tag.id &&
+                  styles.selectedTag,
+              ]}
+              onPress={() =>
+                setSelectedTagId(
+                  selectedTagId === tag.id
+                    ? null
+                    : tag.id
+                )
+              }
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.tagText,
+                  selectedTagId === tag.id &&
+                    styles.selectedTagText,
+                ]}
+              >
+                {tag.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* กรอก Password แบบ Optional */}
+      <View style={styles.section}>
+        <TextField
+          label="Password"
+          placeholder="Enter password (optional)"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </View>
+
+      {/* กดเพื่อยืนยันและอัปโหลด */}
+      <PrimaryButton
+        title={uploading ? 'Uploading...' : 'Confirm'}
+        onPress={handleConfirm}
+        loading={uploading}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
+  container: {
+    padding: 20,
+    paddingTop: 24,
+    paddingBottom: 30,
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#222',
+    marginBottom: 24,
+  },
+
+  // กล่องสำหรับเลือกไฟล์
+  importBox: {
+    height: 180,
+    borderWidth: 1,
+    borderColor: '#BDBDBD',
+    borderRadius: 12,
+    backgroundColor: '#F3F3F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  uploadIcon: {
+    width: 55,
+    height: 55,
+    borderRadius: 30,
+    backgroundColor: '#D9D9D9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  uploadIconText: {
+    fontSize: 30,
+    color: '#333',
+  },
+
+  importTitle: {
+    fontSize: 19,
+    fontWeight: '600',
+    color: '#222',
+  },
+
+  importDescription: {
+    fontSize: 13,
+    color: '#777',
+    marginTop: 6,
+  },
+
+  fileSection: {
+    marginBottom: 22,
+  },
+
+  section: {
+    marginBottom: 22,
+  },
+
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 10,
+  },
+
+  fileCard: {
+    minHeight: 70,
+    backgroundColor: '#F2F2F2',
+    borderRadius: 10,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  fileIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 8,
+    backgroundColor: '#D0D0D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  fileIconText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#555',
+  },
+
+  fileInfo: {
+    flex: 1,
+  },
+
+  fileName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#222',
+  },
+
+  fileType: {
+    fontSize: 12,
+    color: '#777',
+    marginTop: 4,
+  },
+
+  deleteText: {
+    fontSize: 28,
+    color: '#555',
+    paddingHorizontal: 8,
+  },
+
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+
+  tag: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#BDBDBD',
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+  },
+
+  selectedTag: {
+    backgroundColor: '#D9D9D9',
+    borderColor: '#333',
+  },
+
+  tagText: {
+    fontSize: 14,
+    color: '#333',
+  },
+
+  selectedTagText: {
+    fontWeight: '600',
+    color: '#222',
+  },
+
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#BDBDBD',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#222',
+    backgroundColor: '#FFF',
+  },
+
+  confirmButton: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginTop: 5,
+  },
+
+  confirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#222',
+  },
 });
