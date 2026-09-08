@@ -17,17 +17,21 @@
 //   if (password) form.append('password', password);
 //   await apiFetch('/api/files', { method: 'POST', body: form }); // -> 202 { status, moderationItemId }
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { apiFetch, ApiError } from '@/lib/api';
+import type { Tag } from '@/types';
+import TextField from '@/components/TextField';
+import PrimaryButton from '@/components/PrimaryButton';
 
 
 export default function UploadScreen() {
@@ -41,18 +45,25 @@ export default function UploadScreen() {
   // เก็บ Password ที่ผู้ใช้กรอก
   const [password, setPassword] = useState('');
 
-  // ข้อมูล Tag สำหรับแสดงบนหน้า
-  const tags = [
-    { id: '1', name: 'Document' },
-    { id: '2', name: 'Work' },
-    { id: '3', name: 'Personal' },
-  ];
+  // สถานะกำลังอัปโหลด (กันกดซ้ำ + โชว์ loading บนปุ่ม)
+  const [uploading, setUploading] = useState(false);
+
+  // Tag จริงของ user คนนี้ ดึงจาก GET /api/tags (คืนเป็น array ตรงๆ ไม่มี wrapper object)
+  const [tags, setTags] = useState<Tag[]>([]);
+
+  useEffect(() => {
+    apiFetch<Tag[]>('/api/tags')
+      .then(setTags)
+      .catch(() => {
+        // โหลด tag ไม่สำเร็จ — ปล่อยให้ list ว่างไปก่อน ไม่ block การอัปโหลดไฟล์แบบไม่ติด tag
+      });
+  }, []);
 
   // เปิดตัวเลือกไฟล์จากเครื่อง
   const pickFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: '/',
+        type: '*/*',
         copyToCacheDirectory: true,
       });
 
@@ -85,6 +96,7 @@ export default function UploadScreen() {
       return;
     }
 
+    setUploading(true);
     try {
       // สร้าง FormData สำหรับส่งข้อมูลแบบ multipart/form-data
       const form = new FormData();
@@ -109,32 +121,29 @@ export default function UploadScreen() {
         form.append('password', password);
       }
 
-      // เรียก API เพื่ออัปโหลดไฟล์
-      const response = await apiFetch('/api/files', {
+      // เรียก API เพื่ออัปโหลดไฟล์ — apiFetch คืนค่า JSON ที่ parse แล้วตรงๆ (ไม่มี .status)
+      // และจะ throw ApiError เองถ้า response ไม่ ok เลยแค่ไม่ throw ก็แปลว่าสำเร็จ (202 PENDING_SCAN)
+      await apiFetch('/api/files', {
         method: 'POST',
         body: form,
       });
 
-      // 202 หมายถึงไฟล์เข้าสู่คิวตรวจสอบแล้ว
-      if (response.status === 202) {
-        Alert.alert(
-          'Upload สำเร็จ',
-          'กำลังตรวจสอบไฟล์...'
-        );
-        return;
-      }
-
       Alert.alert(
-        'Upload ไม่สำเร็จ',
-        'ไม่สามารถอัปโหลดไฟล์ได้'
+        'Upload สำเร็จ',
+        'กำลังตรวจสอบไฟล์... ไฟล์จะเพิ่มให้อัตโนมัติในหน้า Home เมื่อตรวจสอบเสร็จ'
       );
+      setFile(null);
+      setSelectedTagId(null);
+      setPassword('');
     } catch (error) {
       console.error('Upload error:', error);
 
       Alert.alert(
         'เกิดข้อผิดพลาด',
-        'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+        error instanceof ApiError ? error.message : 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
       );
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -249,14 +258,9 @@ export default function UploadScreen() {
 
       {/* กรอก Password แบบ Optional */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Password
-        </Text>
-
-        <TextInput
-          style={styles.input}
+        <TextField
+          label="Password"
           placeholder="Enter password (optional)"
-          placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -264,15 +268,11 @@ export default function UploadScreen() {
       </View>
 
       {/* กดเพื่อยืนยันและอัปโหลด */}
-      <TouchableOpacity
-        style={styles.confirmButton}
+      <PrimaryButton
+        title={uploading ? 'Uploading...' : 'Confirm'}
         onPress={handleConfirm}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.confirmText}>
-          Confirm
-        </Text>
-      </TouchableOpacity>
+        loading={uploading}
+      />
     </ScrollView>
   );
 }
