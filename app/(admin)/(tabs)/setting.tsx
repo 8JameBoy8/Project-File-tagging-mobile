@@ -11,6 +11,9 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+// ใช้ context ภาษาส่วนกลางตัวเดียวกับฝั่ง (app) แทน state ในเครื่องของหน้านี้เอง — เดิมหน้านี้มี
+// สวิตช์ภาษาแยกต่างหาก เลือกแล้วไม่ persist ข้ามการเปิดแอป และไม่ sync กับ backend/หน้า user เลย
+import { useLanguage } from '@/context/LanguageContext';
 
 type StatsResponse = {
   totalUsers: number;
@@ -18,8 +21,8 @@ type StatsResponse = {
 
 export default function AdminSettingScreen() {
   const { user, logout } = useAuth();
+  const { language, setLanguage } = useLanguage();
 
-  const [language, setLanguage] = useState<'TH' | 'EN'>('TH');
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
 
