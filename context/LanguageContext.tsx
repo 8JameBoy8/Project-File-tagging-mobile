@@ -1,7 +1,8 @@
 // context/LanguageContext.tsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '@/lib/api';
+import { useAuth } from './AuthContext';
 
 export type Language = 'TH' | 'EN';
 
@@ -91,6 +92,7 @@ const translations = {
     confirm_new_password: 'ยืนยันรหัสผ่านใหม่',
     pwd_mismatch: 'รหัสผ่านใหม่ไม่ตรงกัน',
     pwd_required: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+    pwd_too_short: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร',
     change_pwd_success: 'เปลี่ยนรหัสผ่านสำเร็จ',
     change_pwd_failed: 'เปลี่ยนรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบรหัสผ่านปัจจุบัน',
   },
@@ -177,6 +179,7 @@ const translations = {
     confirm_new_password: 'Confirm New Password',
     pwd_mismatch: 'New passwords do not match',
     pwd_required: 'Please fill in all fields',
+    pwd_too_short: 'New password must be at least 8 characters',
     change_pwd_success: 'Password changed successfully',
     change_pwd_failed: 'Failed to change password. Please check your current password',
   },
@@ -194,6 +197,11 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('TH');
+  // LanguageProvider อยู่ใน AuthProvider (ดู app/_layout.tsx) เลยเรียก useAuth() ได้
+  const { user } = useAuth();
+  // เอาไว้ sync ค่าจาก backend มาใช้แค่ครั้งแรกที่ user โหลดเสร็จเท่านั้น ไม่งั้นถ้า sync ทุกครั้งที่
+  // user เปลี่ยน จะทับค่าที่ผู้ใช้เพิ่งสลับภาษาเองกลางเซสชันโดยไม่ตั้งใจ
+  const appliedServerLang = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -207,6 +215,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
     })();
   }, []);
+
+  // ครั้งแรกที่รู้ว่า user เป็นใคร (login/เปิดแอปแล้ว auth เช็คเสร็จ) ถ้า backend มีค่าภาษาที่ user
+  // เคยตั้งไว้ (เช่น ตั้งจากฝั่งเว็บ) ให้ใช้ค่านั้นแทน — กัน mobile เครื่องใหม่/ยังไม่เคยเปิดเห็นเป็น
+  // ค่า default TH ทั้งที่ user เลือกภาษาอื่นไว้แล้วจากที่อื่น
+  useEffect(() => {
+    if (!user?.language || appliedServerLang.current) return;
+    appliedServerLang.current = true;
+    setLanguageState(user.language);
+    SecureStore.setItemAsync(LANGUAGE_STORAGE_KEY, user.language).catch(() => {});
+  }, [user?.language]);
 
   const setLanguage = useCallback(async (newLang: Language) => {
     setLanguageState(newLang);

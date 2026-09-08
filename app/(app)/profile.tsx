@@ -15,7 +15,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { apiFetch, ApiError } from '@/lib/api';
-import { saveAvatarUri, getAvatarUri, clearAvatarUri } from '@/lib/storage';
 import TextField from '@/components/TextField';
 import PrimaryButton from '@/components/PrimaryButton';
 

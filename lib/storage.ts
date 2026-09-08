@@ -33,6 +33,9 @@ export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
+// หมายเหตุ: SecureStore ออกแบบมาเก็บความลับสั้นๆ (มี limit ตาม platform เช่น ~2KB บน iOS
+// Keychain) ใช้เก็บ avatar URI ตรงนี้ได้เพราะเป็นแค่ path ไฟล์ในเครื่อง (สั้นมาก ไม่ใช่ข้อมูล
+// รูปจริง) ถ้าจะเปลี่ยนไปเก็บอย่างอื่นที่ยาวกว่านี้ ควรย้ายไป AsyncStorage แทน
 const AVATAR_KEY_PREFIX = 'user_avatar_';
 
 export async function saveAvatarUri(userId: string, uri: string): Promise<void> {

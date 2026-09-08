@@ -97,13 +97,16 @@ export default function FilePasswordsScreen() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // GET /api/files และ GET /api/tags คืน array ตรงๆ ไม่มี wrapper object ({files:[...]}/
+      // {tags:[...]}) — ของเดิมคาดหวัง wrapper ที่ไม่มีจริง เลยได้ [] ว่างเปล่าตลอด (หน้านี้เลย
+      // โชว์ "ไม่มีไฟล์" อยู่ตลอดแม้จะมีไฟล์ตั้งรหัสผ่านจริงอยู่ก็ตาม)
       const [filesData, tagsData] = await Promise.all([
-        apiFetch<{ files: FileItem[] }>('/api/files?hasPassword=true'),
-        apiFetch<{ tags: Tag[] }>('/api/tags'),
+        apiFetch<FileItem[]>('/api/files?hasPassword=true'),
+        apiFetch<Tag[]>('/api/tags'),
       ]);
-      setFiles(filesData.files ?? []);
+      setFiles(filesData ?? []);
       const map: TagMap = {};
-      (tagsData.tags ?? []).forEach((item) => { map[item.name] = item; });
+      (tagsData ?? []).forEach((item) => { map[item.name] = item; });
       setTagMap(map);
     } catch {
       Alert.alert(t('error'), 'ไม่สามารถโหลดรายการไฟล์ได้');

@@ -30,8 +30,8 @@ export default function ChangePasswordScreen() {
       setError(t('pwd_mismatch'));
       return;
     }
-    if (newPassword.length < 6) {
-      setError('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+    if (newPassword.length < 8) {
+      setError(t('pwd_too_short'));
       return;
     }
 
