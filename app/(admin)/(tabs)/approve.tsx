@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { apiFetch } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 import type { ModerationItem } from '@/types';
 
 type ModerationResponse = {
@@ -21,6 +22,11 @@ type ModerationResponse = {
 };
 
 export default function AdminApproveScreen() {
+  // เดิมหน้านี้ผสมไทย/อังกฤษแบบสุ่มๆ ตายตัว (เช่น 'Approve'/'Reject' อังกฤษ แต่ข้อความ error เป็น
+  // ไทย) ไม่เคยเชื่อมกับสวิตช์ภาษาจริงเลย — ใช้ pattern เดียวกับหน้า Admin Setting/Home
+  const { language } = useLanguage();
+  const isThai = language === 'TH';
+
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -80,16 +86,16 @@ export default function AdminApproveScreen() {
       );
 
       Alert.alert(
-        'เกิดข้อผิดพลาด',
+        isThai ? 'เกิดข้อผิดพลาด' : 'Error',
         error instanceof Error
           ? error.message
-          : 'ไม่สามารถโหลดรายการรอตรวจสอบได้',
+          : (isThai ? 'ไม่สามารถโหลดรายการรอตรวจสอบได้' : 'Failed to load the review queue'),
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isThai]);
 
   useEffect(() => {
     loadModeration();
@@ -120,17 +126,17 @@ export default function AdminApproveScreen() {
     }
 
     Alert.alert(
-      'Approve',
-      `ต้องการอนุมัติไฟล์ "${getFileName(
-        selectedItem,
-      )}" หรือไม่?`,
+      isThai ? 'อนุมัติ' : 'Approve',
+      isThai
+        ? `ต้องการอนุมัติไฟล์ "${getFileName(selectedItem, isThai)}" หรือไม่?`
+        : `Approve file "${getFileName(selectedItem, isThai)}"?`,
       [
         {
-          text: 'ยกเลิก',
+          text: isThai ? 'ยกเลิก' : 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Approve',
+          text: isThai ? 'อนุมัติ' : 'Approve',
           onPress: async () => {
             try {
               setProcessing(true);
@@ -143,8 +149,8 @@ export default function AdminApproveScreen() {
               );
 
               Alert.alert(
-                'สำเร็จ',
-                'อนุมัติไฟล์เรียบร้อยแล้ว',
+                isThai ? 'สำเร็จ' : 'Success',
+                isThai ? 'อนุมัติไฟล์เรียบร้อยแล้ว' : 'File approved successfully',
               );
 
               await loadModeration();
@@ -155,10 +161,10 @@ export default function AdminApproveScreen() {
               );
 
               Alert.alert(
-                'Approve ไม่สำเร็จ',
+                isThai ? 'อนุมัติไม่สำเร็จ' : 'Approve Failed',
                 error instanceof Error
                   ? error.message
-                  : 'ไม่สามารถอนุมัติไฟล์ได้',
+                  : (isThai ? 'ไม่สามารถอนุมัติไฟล์ได้' : 'Failed to approve the file'),
               );
             } finally {
               setProcessing(false);
@@ -183,17 +189,17 @@ export default function AdminApproveScreen() {
     }
 
     Alert.alert(
-      'Reject',
-      `ต้องการปฏิเสธไฟล์ "${getFileName(
-        selectedItem,
-      )}" หรือไม่?`,
+      isThai ? 'ปฏิเสธ' : 'Reject',
+      isThai
+        ? `ต้องการปฏิเสธไฟล์ "${getFileName(selectedItem, isThai)}" หรือไม่?`
+        : `Reject file "${getFileName(selectedItem, isThai)}"?`,
       [
         {
-          text: 'ยกเลิก',
+          text: isThai ? 'ยกเลิก' : 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Reject',
+          text: isThai ? 'ปฏิเสธ' : 'Reject',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -207,8 +213,8 @@ export default function AdminApproveScreen() {
               );
 
               Alert.alert(
-                'สำเร็จ',
-                'ปฏิเสธไฟล์เรียบร้อยแล้ว',
+                isThai ? 'สำเร็จ' : 'Success',
+                isThai ? 'ปฏิเสธไฟล์เรียบร้อยแล้ว' : 'File rejected successfully',
               );
 
               await loadModeration();
@@ -219,10 +225,10 @@ export default function AdminApproveScreen() {
               );
 
               Alert.alert(
-                'Reject ไม่สำเร็จ',
+                isThai ? 'ปฏิเสธไม่สำเร็จ' : 'Reject Failed',
                 error instanceof Error
                   ? error.message
-                  : 'ไม่สามารถปฏิเสธไฟล์ได้',
+                  : (isThai ? 'ไม่สามารถปฏิเสธไฟล์ได้' : 'Failed to reject the file'),
               );
             } finally {
               setProcessing(false);
@@ -249,7 +255,7 @@ export default function AdminApproveScreen() {
           />
 
           <Text style={styles.loadingText}>
-            กำลังโหลดไฟล์ที่รอตรวจสอบ...
+            {isThai ? 'กำลังโหลดไฟล์ที่รอตรวจสอบ...' : 'Loading files awaiting review...'}
           </Text>
         </View>
       </SafeAreaView>
@@ -282,11 +288,11 @@ export default function AdminApproveScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>
-              Approve / Select
+              {isThai ? 'อนุมัติ / เลือก' : 'Approve / Select'}
             </Text>
 
             <Text style={styles.headerSubtitle}>
-              ตรวจสอบไฟล์ที่ต้องให้ Admin ตัดสิน
+              {isThai ? 'ตรวจสอบไฟล์ที่ต้องให้ Admin ตัดสิน' : 'Review files awaiting an admin decision'}
             </Text>
           </View>
 
@@ -296,7 +302,7 @@ export default function AdminApproveScreen() {
             </Text>
 
             <Text style={styles.pendingLabel}>
-              Pending
+              {isThai ? 'รอตรวจสอบ' : 'Pending'}
             </Text>
           </View>
         </View>
@@ -327,6 +333,7 @@ export default function AdminApproveScreen() {
                 >
                   {getFileName(
                     selectedItem,
+                    isThai,
                   )}
                 </Text>
 
@@ -336,6 +343,7 @@ export default function AdminApproveScreen() {
                 >
                   {getUploaderName(
                     selectedItem,
+                    isThai,
                   )}
                 </Text>
               </View>
@@ -346,35 +354,38 @@ export default function AdminApproveScreen() {
             {/* FILE DETAILS */}
 
             <DetailRow
-              label="Username"
+              label={isThai ? 'ผู้ใช้' : 'Username'}
               value={getUploaderName(
                 selectedItem,
+                isThai,
               )}
             />
 
             <DetailRow
-              label="Type"
+              label={isThai ? 'ประเภท' : 'Type'}
               value={getFileType(
                 selectedItem,
               )}
             />
 
             <DetailRow
-              label="Size"
+              label={isThai ? 'ขนาด' : 'Size'}
               value={getFileSize(
                 selectedItem,
               )}
             />
 
             <DetailRow
-              label="Tags"
-              value={`${getTagCount(
-                selectedItem,
-              )} tags`}
+              label={isThai ? 'แท็ก' : 'Tags'}
+              value={
+                isThai
+                  ? `${getTagCount(selectedItem)} แท็ก`
+                  : `${getTagCount(selectedItem)} tags`
+              }
             />
 
             <DetailRow
-              label="Status"
+              label={isThai ? 'สถานะ' : 'Status'}
               value={getStatus(
                 selectedItem,
               )}
@@ -386,12 +397,13 @@ export default function AdminApproveScreen() {
 
             <View style={styles.scanCard}>
               <Text style={styles.scanTitle}>
-                Scan Result / Reason
+                {isThai ? 'ผลการสแกน / เหตุผล' : 'Scan Result / Reason'}
               </Text>
 
               <Text style={styles.scanText}>
                 {getScanResult(
                   selectedItem,
+                  isThai,
                 )}
               </Text>
             </View>
@@ -421,7 +433,7 @@ export default function AdminApproveScreen() {
                       styles.approveText
                     }
                   >
-                    ✓  Approve
+                    {isThai ? '✓  อนุมัติ' : '✓  Approve'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -438,7 +450,7 @@ export default function AdminApproveScreen() {
                 <Text
                   style={styles.rejectText}
                 >
-                  ×  Reject
+                  {isThai ? '×  ปฏิเสธ' : '×  Reject'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -450,12 +462,13 @@ export default function AdminApproveScreen() {
             </Text>
 
             <Text style={styles.emptyTitle}>
-              ไม่มีไฟล์ที่รอตรวจสอบ
+              {isThai ? 'ไม่มีไฟล์ที่รอตรวจสอบ' : 'No files awaiting review'}
             </Text>
 
             <Text style={styles.emptyText}>
-              ขณะนี้ไม่มีไฟล์
-              PENDING_REVIEW
+              {isThai
+                ? 'ขณะนี้ไม่มีไฟล์ PENDING_REVIEW'
+                : 'There are currently no PENDING_REVIEW files'}
             </Text>
           </View>
         )}
@@ -467,11 +480,11 @@ export default function AdminApproveScreen() {
         <View style={styles.queueHeader}>
           <View>
             <Text style={styles.queueTitle}>
-              Review Queue
+              {isThai ? 'คิวตรวจสอบ' : 'Review Queue'}
             </Text>
 
             <Text style={styles.queueSubtitle}>
-              ไฟล์ที่รอการตรวจสอบ
+              {isThai ? 'ไฟล์ที่รอการตรวจสอบ' : 'Files awaiting review'}
             </Text>
           </View>
         </View>
@@ -528,7 +541,7 @@ export default function AdminApproveScreen() {
                     }
                     numberOfLines={1}
                   >
-                    {getFileName(item)}
+                    {getFileName(item, isThai)}
                   </Text>
 
                   <Text
@@ -539,6 +552,7 @@ export default function AdminApproveScreen() {
                   >
                     {getUploaderName(
                       item,
+                      isThai,
                     )}
                   </Text>
 
@@ -547,8 +561,9 @@ export default function AdminApproveScreen() {
                   >
                     {getFileSize(item)}
                     {' • '}
-                    {getTagCount(item)}
-                    {' tags'}
+                    {isThai
+                      ? `${getTagCount(item)} แท็ก`
+                      : `${getTagCount(item)} tags`}
                   </Text>
                 </View>
 
@@ -587,7 +602,7 @@ export default function AdminApproveScreen() {
         ) : (
           <View style={styles.emptyQueue}>
             <Text style={styles.emptyText}>
-              ไม่มีรายการ
+              {isThai ? 'ไม่มีรายการ' : 'No items'}
             </Text>
           </View>
         )}
@@ -629,6 +644,7 @@ function DetailRow({
 
 function getFileName(
   item: ModerationItem,
+  isThai = false,
 ): string {
   const file = item as ModerationItem & {
     name?: string | null;
@@ -642,12 +658,13 @@ function getFileName(
     file.filename ??
     file.originalName ??
     file.name ??
-    'Untitled file'
+    (isThai ? 'ไฟล์ไม่มีชื่อ' : 'Untitled file')
   );
 }
 
 function getUploaderName(
   item: ModerationItem,
+  isThai = false,
 ): string {
   const file = item as ModerationItem & {
     uploader?: {
@@ -662,7 +679,7 @@ function getUploaderName(
     file.uploader?.displayName ??
     file.uploader?.email ??
     file.uploadedBy ??
-    'Unknown User'
+    (isThai ? 'ไม่ทราบผู้ใช้' : 'Unknown User')
   );
 }
 
@@ -766,13 +783,14 @@ function getStatus(
 
 function getScanResult(
   item: ModerationItem,
+  isThai = false,
 ): string {
   const file = item as ModerationItem & {
     scanResult?: string | null;
   };
 
   if (!file.scanResult) {
-    return 'ไม่มีข้อมูลผลการสแกน';
+    return isThai ? 'ไม่มีข้อมูลผลการสแกน' : 'No scan result available';
   }
 
   try {

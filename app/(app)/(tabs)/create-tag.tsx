@@ -16,6 +16,7 @@ import { apiFetch, ApiError } from '@/lib/api';
 import type { Tag } from '@/types';
 import TextField from '@/components/TextField';
 import PrimaryButton from '@/components/PrimaryButton';
+import { useLanguage } from '@/context/LanguageContext';
 
 // สีตัวเลือกสำเร็จรูปชุดเดียวกับฝั่งเว็บ
 const SWATCHES = [
@@ -24,6 +25,7 @@ const SWATCHES = [
 ];
 
 export default function CreateTagScreen() {
+  const { t } = useLanguage();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -49,7 +51,7 @@ export default function CreateTagScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert('แจ้งเตือน', 'กรุณาใส่ชื่อแท็ก');
+      Alert.alert(t('notice_title'), t('create_tag_name_required'));
       return;
     }
     setCreating(true);
@@ -62,7 +64,7 @@ export default function CreateTagScreen() {
       setName('');
       setColor(SWATCHES[0]);
     } catch (e) {
-      Alert.alert('สร้างแท็กไม่สำเร็จ', e instanceof ApiError ? e.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      Alert.alert(t('create_tag_create_failed_title'), e instanceof ApiError ? e.message : t('generic_error_retry'));
     } finally {
       setCreating(false);
     }
@@ -79,16 +81,16 @@ export default function CreateTagScreen() {
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) {
-      Alert.alert('แจ้งเตือน', 'กรุณาเลือกแท็กที่ต้องการลบก่อน (แตะที่แท็กด้านล่าง)');
+      Alert.alert(t('notice_title'), t('create_tag_select_before_delete'));
       return;
     }
     Alert.alert(
-      'ยืนยันการลบ',
-      `ต้องการลบ ${selectedIds.size} แท็กที่เลือกใช่หรือไม่?`,
+      t('confirm_delete_title'),
+      t('create_tag_confirm_delete_msg', { count: selectedIds.size }),
       [
-        { text: 'ยกเลิก', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'ลบ',
+          text: t('delete_label'),
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -113,14 +115,14 @@ export default function CreateTagScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.card}>
-        <TextField label="ชื่อแท็ก" placeholder="ตั้งชื่อแท็ก" value={name} onChangeText={setName} />
+        <TextField label={t('create_tag_name_label')} placeholder={t('create_tag_name_placeholder')} value={name} onChangeText={setName} />
 
         <View style={styles.previewRow}>
           <View style={[styles.previewCircle, { backgroundColor: color }]} />
-          <Text style={styles.previewName}>{name || 'ชื่อแท็ก'}</Text>
+          <Text style={styles.previewName}>{name || t('create_tag_name_label')}</Text>
         </View>
 
-        <Text style={styles.sectionLabel}>สี</Text>
+        <Text style={styles.sectionLabel}>{t('color_label')}</Text>
         <View style={styles.swatchRow}>
           {SWATCHES.map((c) => (
             <TouchableOpacity
@@ -136,7 +138,7 @@ export default function CreateTagScreen() {
         </View>
 
         <TextField
-          label="หรือใส่รหัสสีเอง (เช่น #4096ff)"
+          label={t('create_tag_custom_color_label')}
           placeholder="#rrggbb"
           value={color}
           onChangeText={setColor}
@@ -144,17 +146,21 @@ export default function CreateTagScreen() {
         />
 
         <PrimaryButton
-          title={creating ? 'กำลังสร้าง...' : '+ สร้างแท็ก'}
+          title={creating ? t('create_tag_creating') : t('create_tag_submit')}
           onPress={handleCreate}
           loading={creating}
         />
       </View>
 
       <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>แท็กทั้งหมด ({tags.length})</Text>
+        <Text style={styles.listTitle}>{t('create_tag_all_tags', { count: tags.length })}</Text>
         <TouchableOpacity onPress={handleDeleteSelected} disabled={deleting}>
           <Text style={[styles.deleteLink, selectedIds.size > 0 && styles.deleteLinkActive]}>
-            {deleting ? 'กำลังลบ...' : selectedIds.size > 0 ? `ลบที่เลือก (${selectedIds.size})` : 'เลือกเพื่อลบ'}
+            {deleting
+              ? t('create_tag_deleting')
+              : selectedIds.size > 0
+                ? t('create_tag_delete_selected', { count: selectedIds.size })
+                : t('create_tag_select_to_delete')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -162,7 +168,7 @@ export default function CreateTagScreen() {
       {loading ? (
         <ActivityIndicator style={{ marginTop: 20 }} />
       ) : tags.length === 0 ? (
-        <Text style={styles.emptyText}>ยังไม่มีแท็ก ลองสร้างแท็กแรกของคุณด้านบนได้เลย</Text>
+        <Text style={styles.emptyText}>{t('create_tag_empty_hint')}</Text>
       ) : (
         <View style={styles.chipWrap}>
           {tags.map((tag) => {

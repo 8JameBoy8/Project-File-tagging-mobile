@@ -18,7 +18,29 @@ const translations = {
     success: 'สำเร็จ',
     error: 'ข้อผิดพลาด',
     loading: 'กำลังโหลด...',
-    
+    delete_label: 'ลบ',
+    notice_title: 'แจ้งเตือน',
+    confirm_delete_title: 'ยืนยันการลบ',
+    generic_error_short: 'เกิดข้อผิดพลาด',
+    generic_error_retry: 'เกิดข้อผิดพลาด กรุณาลองใหม่',
+    sort_label: 'เรียงตาม',
+    sort_newest: 'ใหม่สุด',
+    sort_oldest: 'เก่าสุด',
+    sort_by_type: 'ประเภทไฟล์',
+    sort_by_name: 'ชื่อไฟล์',
+    filter_tag_label: 'กรองแท็ก',
+    filter_by_tag_title: 'กรองตามแท็ก',
+    files_count: '{count} ไฟล์',
+    no_files_found: 'ไม่พบไฟล์',
+    no_tags_yet: 'ยังไม่มีแท็ก',
+    clear_filter_link: 'ล้างตัวกรอง',
+    select_tag_title: 'เลือกแท็ก',
+    untagged_files_label: 'ไฟล์ที่ไม่มีแท็ก',
+    already_tagged_label: 'มีแท็กนี้แล้ว',
+    color_label: 'สี',
+    tag_label: 'แท็ก',
+    password_label: 'รหัสผ่าน',
+
     // Tabs
     tab_home: 'หน้าหลัก',
     tab_manage_tag: 'จัดการแท็ก',
@@ -95,6 +117,71 @@ const translations = {
     pwd_too_short: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร',
     change_pwd_success: 'เปลี่ยนรหัสผ่านสำเร็จ',
     change_pwd_failed: 'เปลี่ยนรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบรหัสผ่านปัจจุบัน',
+
+    // Create Tag Screen
+    create_tag_name_label: 'ชื่อแท็ก',
+    create_tag_name_placeholder: 'ตั้งชื่อแท็ก',
+    create_tag_custom_color_label: 'หรือใส่รหัสสีเอง (เช่น #4096ff)',
+    create_tag_creating: 'กำลังสร้าง...',
+    create_tag_submit: '+ สร้างแท็ก',
+    create_tag_all_tags: 'แท็กทั้งหมด ({count})',
+    create_tag_deleting: 'กำลังลบ...',
+    create_tag_delete_selected: 'ลบที่เลือก ({count})',
+    create_tag_select_to_delete: 'เลือกเพื่อลบ',
+    create_tag_empty_hint: 'ยังไม่มีแท็ก ลองสร้างแท็กแรกของคุณด้านบนได้เลย',
+    create_tag_name_required: 'กรุณาใส่ชื่อแท็ก',
+    create_tag_create_failed_title: 'สร้างแท็กไม่สำเร็จ',
+    create_tag_select_before_delete: 'กรุณาเลือกแท็กที่ต้องการลบก่อน (แตะที่แท็กด้านล่าง)',
+    create_tag_confirm_delete_msg: 'ต้องการลบ {count} แท็กที่เลือกใช่หรือไม่?',
+
+    // Manage Tag Screen
+    manage_tag_select_prompt: 'เลือกแท็กเพื่อเพิ่มไฟล์',
+    manage_tag_selected_count: '{count} เลือกแล้ว',
+    manage_tag_confirm_action: 'ยืนยัน',
+    manage_tag_name_label: 'ชื่อ',
+    manage_tag_select_tag_first: 'กรุณาเลือกแท็กเป้าหมายก่อน (แตะปุ่มเลือกแท็กด้านบน)',
+    manage_tag_select_one_file: 'กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์',
+    manage_tag_add_failed_title: 'เพิ่มไฟล์เข้าแท็กไม่สำเร็จ',
+    manage_tag_confirm_delete_tag: 'ต้องการลบแท็ก "{name}" ใช่หรือไม่?',
+    manage_tag_delete_failed_title: 'ลบไม่สำเร็จ',
+    manage_tag_save_failed_title: 'บันทึกไม่สำเร็จ',
+    manage_tag_pick_hint: 'แตะไฟล์ด้านล่างเพื่อเลือกเข้าแท็ก {name}',
+    manage_tag_create_tag_first: 'ยังไม่มีแท็ก ไปสร้างที่หน้า Create Tag ก่อน',
+
+    // Home Screen
+    home_locked_msg: 'ไฟล์นี้ต้องใส่รหัสผ่านก่อนดู',
+    home_file_password_label: 'รหัสผ่านไฟล์',
+    home_password_placeholder: 'กรอกรหัสผ่าน...',
+    home_password_incorrect: 'รหัสผ่านไม่ถูกต้อง',
+    home_unlock_btn: 'ปลดล็อก',
+    home_no_tags: 'ไม่มีแท็ก',
+    home_downloading: 'กำลังดาวน์โหลด...',
+    home_download_btn: 'ดาวน์โหลด',
+    home_deleting: 'กำลังลบ...',
+    home_download_success_title: 'ดาวน์โหลดสำเร็จ',
+    home_download_saved_at: 'บันทึกไฟล์ไว้ที่ {path}',
+    home_download_failed_title: 'ดาวน์โหลดไม่สำเร็จ',
+    home_confirm_delete_file: 'ต้องการลบไฟล์ "{name}" ใช่หรือไม่?',
+
+    // Import File (Upload) Screen
+    upload_description: 'แตะเพื่อเลือกไฟล์จากเครื่อง (เลือกได้หลายไฟล์)',
+    upload_max_files: 'เลือกไฟล์ได้สูงสุด {count} ไฟล์ต่อครั้ง',
+    upload_max_files_partial: 'เลือกไฟล์ได้สูงสุด {count} ไฟล์ต่อครั้ง เพิ่มให้แค่บางไฟล์',
+    upload_file_too_big_title: 'ไฟล์ใหญ่เกินไป',
+    upload_file_too_big_msg: 'ไฟล์นี้เกิน 50MB เลยไม่ถูกเพิ่ม: {names}',
+    upload_pick_error_title: 'เกิดข้อผิดพลาด',
+    upload_pick_error_msg: 'ไม่สามารถเลือกไฟล์ได้',
+    upload_select_file_first: 'กรุณาเลือกไฟล์ก่อน',
+    upload_selected_files: 'ไฟล์ที่เลือก ({count}/{max})',
+    upload_file_icon_label: 'ไฟล์',
+    upload_unknown_type: 'ไม่ทราบชนิดไฟล์',
+    upload_password_placeholder: 'กรอกรหัสผ่าน (ไม่บังคับ)',
+    upload_uploading: 'กำลังอัปโหลด...',
+    upload_confirm_btn: 'ยืนยัน',
+    upload_success_title: 'อัปโหลดสำเร็จ',
+    upload_success_msg: 'กำลังตรวจสอบไฟล์ทั้ง {count} ไฟล์... ไฟล์จะเพิ่มให้อัตโนมัติในหน้า Home เมื่อตรวจสอบเสร็จ',
+    upload_partial_title: 'อัปโหลดสำเร็จบางส่วน',
+    upload_partial_msg: 'สำเร็จ {success} จาก {total} ไฟล์ ลองอัปโหลดไฟล์ที่เหลือใหม่อีกครั้ง',
   },
   EN: {
     // Common
@@ -105,6 +192,28 @@ const translations = {
     success: 'Success',
     error: 'Error',
     loading: 'Loading...',
+    delete_label: 'Delete',
+    notice_title: 'Notice',
+    confirm_delete_title: 'Confirm Delete',
+    generic_error_short: 'An error occurred',
+    generic_error_retry: 'An error occurred, please try again',
+    sort_label: 'Sort by',
+    sort_newest: 'Newest',
+    sort_oldest: 'Oldest',
+    sort_by_type: 'File Type',
+    sort_by_name: 'File Name',
+    filter_tag_label: 'Filter Tag',
+    filter_by_tag_title: 'Filter by Tag',
+    files_count: '{count} files',
+    no_files_found: 'No files found',
+    no_tags_yet: 'No tags yet',
+    clear_filter_link: 'Clear filter',
+    select_tag_title: 'Select Tag',
+    untagged_files_label: 'Untagged files',
+    already_tagged_label: 'Already tagged',
+    color_label: 'Color',
+    tag_label: 'Tag',
+    password_label: 'Password',
 
     // Tabs
     tab_home: 'Home',
@@ -182,6 +291,71 @@ const translations = {
     pwd_too_short: 'New password must be at least 8 characters',
     change_pwd_success: 'Password changed successfully',
     change_pwd_failed: 'Failed to change password. Please check your current password',
+
+    // Create Tag Screen
+    create_tag_name_label: 'Tag Name',
+    create_tag_name_placeholder: 'Enter tag name',
+    create_tag_custom_color_label: 'Or enter a custom color code (e.g. #4096ff)',
+    create_tag_creating: 'Creating...',
+    create_tag_submit: '+ Create Tag',
+    create_tag_all_tags: 'All Tags ({count})',
+    create_tag_deleting: 'Deleting...',
+    create_tag_delete_selected: 'Delete Selected ({count})',
+    create_tag_select_to_delete: 'Select to Delete',
+    create_tag_empty_hint: 'No tags yet — create your first one above',
+    create_tag_name_required: 'Please enter a tag name',
+    create_tag_create_failed_title: 'Failed to create tag',
+    create_tag_select_before_delete: 'Please select tags to delete first (tap the tags below)',
+    create_tag_confirm_delete_msg: 'Delete {count} selected tag(s)?',
+
+    // Manage Tag Screen
+    manage_tag_select_prompt: 'Select a tag to add files',
+    manage_tag_selected_count: '{count} selected',
+    manage_tag_confirm_action: 'Confirm',
+    manage_tag_name_label: 'Name',
+    manage_tag_select_tag_first: 'Please select a target tag first (tap the tag selector above)',
+    manage_tag_select_one_file: 'Please select at least 1 file',
+    manage_tag_add_failed_title: 'Failed to add files to tag',
+    manage_tag_confirm_delete_tag: 'Delete tag "{name}"?',
+    manage_tag_delete_failed_title: 'Failed to delete',
+    manage_tag_save_failed_title: 'Failed to save',
+    manage_tag_pick_hint: 'Tap files below to add them to tag {name}',
+    manage_tag_create_tag_first: 'No tags yet — create one on the Create Tag page first',
+
+    // Home Screen
+    home_locked_msg: 'This file requires a password to view',
+    home_file_password_label: 'File Password',
+    home_password_placeholder: 'Enter password...',
+    home_password_incorrect: 'Incorrect password',
+    home_unlock_btn: 'Unlock',
+    home_no_tags: 'No tags',
+    home_downloading: 'Downloading...',
+    home_download_btn: 'Download',
+    home_deleting: 'Deleting...',
+    home_download_success_title: 'Download Complete',
+    home_download_saved_at: 'File saved at {path}',
+    home_download_failed_title: 'Download Failed',
+    home_confirm_delete_file: 'Delete file "{name}"?',
+
+    // Import File (Upload) Screen
+    upload_description: 'Tap to select files from your device (multiple allowed)',
+    upload_max_files: 'You can select up to {count} files at a time',
+    upload_max_files_partial: 'You can select up to {count} files at a time — only some files were added',
+    upload_file_too_big_title: 'File Too Large',
+    upload_file_too_big_msg: 'These files exceed 50MB and were not added: {names}',
+    upload_pick_error_title: 'Error',
+    upload_pick_error_msg: 'Unable to select files',
+    upload_select_file_first: 'Please select a file first',
+    upload_selected_files: 'Selected Files ({count}/{max})',
+    upload_file_icon_label: 'FILE',
+    upload_unknown_type: 'Unknown type',
+    upload_password_placeholder: 'Enter password (optional)',
+    upload_uploading: 'Uploading...',
+    upload_confirm_btn: 'Confirm',
+    upload_success_title: 'Upload Successful',
+    upload_success_msg: "Scanning all {count} files... they'll appear automatically on the Home page once scanning is done",
+    upload_partial_title: 'Partially Uploaded',
+    upload_partial_msg: 'Succeeded {success} out of {total} files — try uploading the rest again',
   },
 };
 
@@ -190,7 +364,9 @@ export type TranslationKey = keyof typeof translations.TH;
 type LanguageContextValue = {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
-  t: (key: TranslationKey) => string;
+  // values รองรับ placeholder แบบ {count}/{name} ในข้อความ (เหมือนกับ t() ฝั่งเว็บ — ดู
+  // src/context/LanguageContext.jsx) ใช้แทนการต่อประโยคเองด้วย prefix/suffix หลายคีย์แยกกัน
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -241,9 +417,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey): string => {
+    (key: TranslationKey, values?: Record<string, string | number>): string => {
       const langDict = translations[language] || translations.TH;
-      return langDict[key] || translations.TH[key] || key;
+      let text = langDict[key] || translations.TH[key] || key;
+      // รองรับ placeholder แบบ {count}/{name} ในข้อความ (เหมือน t() ฝั่งเว็บ)
+      if (values) {
+        for (const valueKey of Object.keys(values)) {
+          text = text.replace(`{${valueKey}}`, String(values[valueKey]));
+        }
+      }
+      return text;
     },
     [language]
   );
