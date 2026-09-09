@@ -32,17 +32,28 @@ import { apiFetch, ApiError } from '@/lib/api';
 import type { Tag } from '@/types';
 import TextField from '@/components/TextField';
 import PrimaryButton from '@/components/PrimaryButton';
+import { useLanguage } from '@/context/LanguageContext';
 
+// จำกัดจำนวน/ขนาดไฟล์ตรงกับฝั่งเว็บ (ดู src/app/user/uploadfile/page.jsx)
+const MAX_FILES = 8;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+// ห่อ asset จาก DocumentPicker ด้วย id ของตัวเอง — DocumentPickerAsset ไม่มี id ในตัว และถ้าเลือก
+// ไฟล์เดียวกันซ้ำสองครั้ง uri จะซ้ำกันด้วย ใช้ id นี้เป็น key/อ้างอิงตอนลบทีละไฟล์แทน
+type PickedFile = { id: string; asset: DocumentPicker.DocumentPickerAsset };
 
 export default function UploadScreen() {
-  // เก็บไฟล์ที่ผู้ใช้เลือก
-  const [file, setFile] = useState<any>(null);
+  const { t } = useLanguage();
+  // เก็บไฟล์ที่ผู้ใช้เลือกไว้ทั้งหมด (เลือกได้หลายไฟล์ เพิ่มทีละรอบได้ ไม่ทับของเดิม — เดิมเป็น
+  // single-file แล้วเลือกไฟล์ใหม่ทีไรทับของเก่าทันที เป็นบั๊กที่เจอตอนทดสอบจริงบนมือถือ)
+  const [files, setFiles] = useState<PickedFile[]>([]);
 
   // เก็บ ID ของ Tag ที่ผู้ใช้เลือก
   const [selectedTagId, setSelectedTagId] =
     useState<string | null>(null);
 
-  // เก็บ Password ที่ผู้ใช้กรอก
+  // เก็บ Password ที่ผู้ใช้กรอก (ถ้าใส่ จะใช้รหัสเดียวกันกับทุกไฟล์ในชุดนี้ — ฝั่งเว็บเลือกได้ละเอียด
+  // กว่าว่าจะใช้กับไฟล์ไหนบ้าง แต่มือถือทำแบบง่ายกว่าคือใช้ร่วมกันทั้งชุด)
   const [password, setPassword] = useState('');
 
   // สถานะกำลังอัปโหลด (กันกดซ้ำ + โชว์ loading บนปุ่ม)
@@ -59,91 +70,120 @@ export default function UploadScreen() {
       });
   }, []);
 
-  // เปิดตัวเลือกไฟล์จากเครื่อง
+  // เปิดตัวเลือกไฟล์จากเครื่อง — เลือกได้หลายไฟล์ต่อครั้ง (multiple: true) และกดเลือกซ้ำได้เรื่อยๆ
+  // เพื่อเพิ่มไฟล์เข้าไปในชุดเดิม (ไม่ทับของที่เลือกไว้ก่อนหน้า)
   const pickFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
+        multiple: true,
         copyToCacheDirectory: true,
       });
 
-      // เก็บไฟล์ที่เลือกไว้ใน state
-      if (!result.canceled) {
-        setFile(result.assets[0]);
+      if (result.canceled) return;
+
+      const room = MAX_FILES - files.length;
+      if (room <= 0) {
+        Alert.alert(t('notice_title'), t('upload_max_files', { count: MAX_FILES }));
+        return;
+      }
+
+      const tooBig: string[] = [];
+      const accepted: PickedFile[] = [];
+      for (const asset of result.assets) {
+        if ((asset.size ?? 0) > MAX_FILE_SIZE) {
+          tooBig.push(asset.name);
+          continue;
+        }
+        accepted.push({ id: `${asset.uri}-${Date.now()}-${Math.random()}`, asset });
+      }
+
+      const overflow = accepted.length > room;
+      const toAdd = accepted.slice(0, room);
+
+      if (toAdd.length > 0) {
+        setFiles((prev) => [...prev, ...toAdd]);
+      }
+      if (tooBig.length > 0) {
+        Alert.alert(t('upload_file_too_big_title'), t('upload_file_too_big_msg', { names: tooBig.join(', ') }));
+      } else if (overflow) {
+        Alert.alert(t('notice_title'), t('upload_max_files_partial', { count: MAX_FILES }));
       }
     } catch (error) {
       console.error('Pick file error:', error);
 
       Alert.alert(
-        'เกิดข้อผิดพลาด',
-        'ไม่สามารถเลือกไฟล์ได้'
+        t('upload_pick_error_title'),
+        t('upload_pick_error_msg')
       );
     }
   };
 
-  // ลบไฟล์ที่เลือกออกจากหน้า
-  const removeFile = () => {
-    setFile(null);
+  // ลบไฟล์ที่เลือกออกจากหน้า (ลบทีละไฟล์ตาม id)
+  const removeFile = (id: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  // ส่งไฟล์ Tag และ Password ไปยัง POST /api/files
+  // ส่งไฟล์ทั้งชุด + Tag + Password ไปยัง POST /api/files ทีละไฟล์ (endpoint รับไฟล์เดียวต่อ
+  // request — เหมือนฝั่งเว็บ ดู src/app/user/uploadfile/page.jsx)
   const handleConfirm = async () => {
-    if (!file) {
+    if (files.length === 0) {
       Alert.alert(
-        'แจ้งเตือน',
-        'กรุณาเลือกไฟล์ก่อน'
+        t('notice_title'),
+        t('upload_select_file_first')
       );
       return;
     }
 
     setUploading(true);
-    try {
-      // สร้าง FormData สำหรับส่งข้อมูลแบบ multipart/form-data
+    let successCount = 0;
+    for (const { asset } of files) {
       const form = new FormData();
 
-      // เพิ่มไฟล์สำหรับ React Native
-      form.append('file', {
-        uri: file.uri,
-        name: file.fileName || file.name,
-        type: file.mimeType || 'application/octet-stream',
-      } as any);
+      // เจอจริงตอนทดสอบบนมือถือ: SDK นี้เปลี่ยน fetch/FormData ทั้งระบบเป็นของ Expo เอง
+      // ("winter" runtime) ซึ่ง type ประกาศว่ารองรับ RN แบบเดิม { uri, name, type } (โยน path ให้
+      // native อ่านไฟล์เอง ไม่ต้องโหลดเข้า JS memory) แต่ตัวแปลง FormData ตอนส่งจริง
+      // (node_modules/expo/src/winter/fetch/convertFormData.ts) ดันไม่ได้ implement เคส uri ไว้จริง
+      // (คอมเมนต์ในซอร์สเขียนไว้ตรงๆ ว่า "`uri` is not supported") พอส่ง { uri, name, type } ไปเลย
+      // ตกไปเคส else แล้ว throw "Unsupported FormDataPart implementation" ทุกครั้ง — ทางแก้คือ fetch
+      // ไฟล์ในเครื่อง (local file://) ให้ได้เป็น Blob จริงก่อน แล้ว append Blob แทน (เคสนี้ implement
+      // จริง รองรับแน่นอน) ข้อเสียคือไฟล์ต้องโหลดเข้า memory ทั้งไฟล์ก่อนส่ง แต่ไฟล์จำกัดที่ 50MB
+      // อยู่แล้วเลยไม่มีปัญหา
+      const localBlob = await (await fetch(asset.uri)).blob();
+      // เซ็ต MIME type ให้ตรงเสมอ (blob จาก local fetch อาจไม่ได้ type มาถูกต้อง) — slice() แบบไม่ตัด
+      // เนื้อหาเลย (0 ถึง size เต็ม) คือวิธีมาตรฐานของ Blob API ที่ใช้ "เปลี่ยน type" โดยไม่ต้อง copy ข้อมูลใหม่
+      const typedBlob = localBlob.slice(0, localBlob.size, asset.mimeType || 'application/octet-stream');
+      form.append('file', typedBlob, asset.name);
 
-      // ส่ง Tag เป็น JSON string array
-      form.append(
-        'tags',
-        JSON.stringify(
-          selectedTagId ? [selectedTagId] : []
-        )
-      );
+      form.append('tags', JSON.stringify(selectedTagId ? [selectedTagId] : []));
+      if (password) form.append('password', password);
 
-      // ส่ง Password เฉพาะเมื่อผู้ใช้กรอก
-      if (password) {
-        form.append('password', password);
+      try {
+        // apiFetch คืนค่า JSON ที่ parse แล้วตรงๆ (ไม่มี .status) และจะ throw ApiError เองถ้า
+        // response ไม่ ok เลยแค่ไม่ throw ก็แปลว่าสำเร็จ (202 PENDING_SCAN)
+        await apiFetch('/api/files', { method: 'POST', body: form });
+        successCount += 1;
+      } catch (error) {
+        console.error('Upload error:', error);
       }
+    }
+    setUploading(false);
 
-      // เรียก API เพื่ออัปโหลดไฟล์ — apiFetch คืนค่า JSON ที่ parse แล้วตรงๆ (ไม่มี .status)
-      // และจะ throw ApiError เองถ้า response ไม่ ok เลยแค่ไม่ throw ก็แปลว่าสำเร็จ (202 PENDING_SCAN)
-      await apiFetch('/api/files', {
-        method: 'POST',
-        body: form,
-      });
-
+    if (successCount === files.length) {
       Alert.alert(
-        'Upload สำเร็จ',
-        'กำลังตรวจสอบไฟล์... ไฟล์จะเพิ่มให้อัตโนมัติในหน้า Home เมื่อตรวจสอบเสร็จ'
+        t('upload_success_title'),
+        t('upload_success_msg', { count: successCount })
       );
-      setFile(null);
+      setFiles([]);
       setSelectedTagId(null);
       setPassword('');
-    } catch (error) {
-      console.error('Upload error:', error);
-
+    } else {
       Alert.alert(
-        'เกิดข้อผิดพลาด',
-        error instanceof ApiError ? error.message : 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+        t('upload_partial_title'),
+        t('upload_partial_msg', { success: successCount, total: files.length })
       );
-    } finally {
-      setUploading(false);
+      // เอาเฉพาะไฟล์ที่ยังไม่สำเร็จออกจากลิสต์ไม่ได้ตรงๆ (ไม่รู้ว่าอันไหนพังจากลูปข้างบน) เลยปล่อย
+      // ทั้งชุดไว้ให้ผู้ใช้ตรวจสอบ/กดอัปโหลดซ้ำเอง ปลอดภัยกว่าการเดาว่าไฟล์ไหนสำเร็จแล้วเงียบๆ ลบทิ้ง
     }
   };
 
@@ -154,7 +194,7 @@ export default function UploadScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.title}>
-        Import File
+        {t('tab_import_file')}
       </Text>
 
       {/* กดเพื่อเปิดตัวเลือกไฟล์ */}
@@ -170,58 +210,60 @@ export default function UploadScreen() {
         </View>
 
         <Text style={styles.importTitle}>
-          Import File
+          {t('tab_import_file')}
         </Text>
 
         <Text style={styles.importDescription}>
-          Tap to select a file from your device
+          {t('upload_description')}
         </Text>
       </TouchableOpacity>
 
-      {/* แสดงไฟล์ที่ผู้ใช้เลือก */}
-      {file && (
+      {/* แสดงไฟล์ที่ผู้ใช้เลือกไว้ทั้งหมด — เลือกเพิ่มได้เรื่อยๆ โดยกดกล่องด้านบนซ้ำ */}
+      {files.length > 0 && (
         <View style={styles.fileSection}>
           <Text style={styles.sectionTitle}>
-            Selected File
+            {t('upload_selected_files', { count: files.length, max: MAX_FILES })}
           </Text>
 
-          <View style={styles.fileCard}>
-            <View style={styles.fileIcon}>
-              <Text style={styles.fileIconText}>
-                FILE
-              </Text>
-            </View>
+          {files.map(({ id, asset }) => (
+            <View style={styles.fileCard} key={id}>
+              <View style={styles.fileIcon}>
+                <Text style={styles.fileIconText}>
+                  {t('upload_file_icon_label')}
+                </Text>
+              </View>
 
-            <View style={styles.fileInfo}>
-              <Text
-                style={styles.fileName}
-                numberOfLines={1}
+              <View style={styles.fileInfo}>
+                <Text
+                  style={styles.fileName}
+                  numberOfLines={1}
+                >
+                  {asset.name}
+                </Text>
+
+                <Text style={styles.fileType}>
+                  {asset.mimeType || t('upload_unknown_type')}
+                </Text>
+              </View>
+
+              {/* ปุ่มลบไฟล์ (ลบเฉพาะไฟล์นี้ ไม่กระทบไฟล์อื่นที่เลือกไว้) */}
+              <TouchableOpacity
+                onPress={() => removeFile(id)}
+                activeOpacity={0.7}
               >
-                {file.name}
-              </Text>
-
-              <Text style={styles.fileType}>
-                {file.mimeType || 'Unknown type'}
-              </Text>
+                <Text style={styles.deleteText}>
+                  ×
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            {/* ปุ่มลบไฟล์ */}
-            <TouchableOpacity
-              onPress={removeFile}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.deleteText}>
-                ×
-              </Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
       )}
 
       {/* เลือก Tag */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
-          Tag
+          {t('tag_label')}
         </Text>
 
         <View style={styles.tagContainer}>
@@ -259,17 +301,18 @@ export default function UploadScreen() {
       {/* กรอก Password แบบ Optional */}
       <View style={styles.section}>
         <TextField
-          label="Password"
-          placeholder="Enter password (optional)"
+          label={t('password_label')}
+          placeholder={t('upload_password_placeholder')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoCapitalize="none"
         />
       </View>
 
       {/* กดเพื่อยืนยันและอัปโหลด */}
       <PrimaryButton
-        title={uploading ? 'Uploading...' : 'Confirm'}
+        title={uploading ? t('upload_uploading') : t('upload_confirm_btn')}
         onPress={handleConfirm}
         loading={uploading}
       />
