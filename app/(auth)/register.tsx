@@ -61,11 +61,21 @@ export default function RegisterScreen() {
             value={email}
             onChangeText={setEmail}
           />
-          <TextField label="Password" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} />
+          {/* autoCapitalize="none" ทั้งสองช่อง — ไม่งั้นตัวอักษรแรกที่พิมพ์ (ไม่ใช่ paste) จะถูก
+              keyboard เปลี่ยนเป็นตัวใหญ่ให้อัตโนมัติ ทำให้รหัสผ่านที่ตั้งใจให้ตัวเล็กขึ้นต้นผิดแบบเงียบๆ */}
+          <TextField
+            label="Password"
+            placeholder="••••••••"
+            secureTextEntry
+            autoCapitalize="none"
+            value={password}
+            onChangeText={setPassword}
+          />
           <TextField
             label="Confirm Password"
             placeholder="••••••••"
             secureTextEntry
+            autoCapitalize="none"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />

@@ -52,10 +52,13 @@ export default function LoginScreen() {
         />
         
         {/* ใช้ TextField ของเพื่อน */}
+        {/* autoCapitalize="none" — ไม่งั้นตัวอักษรแรกที่พิมพ์ (ไม่ใช่ paste) จะถูก keyboard เปลี่ยน
+            เป็นตัวใหญ่ให้อัตโนมัติ ทำให้รหัสผ่านที่ตั้งใจให้ตัวเล็กขึ้นต้นกลายเป็นผิดแบบเงียบๆ */}
         <TextField
           label="Password"
           placeholder="••••••••"
           secureTextEntry
+          autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
         />

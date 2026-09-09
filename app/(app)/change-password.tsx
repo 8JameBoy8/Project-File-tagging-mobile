@@ -63,6 +63,7 @@ export default function ChangePasswordScreen() {
           label={t('current_password')}
           placeholder="••••••••"
           secureTextEntry
+          autoCapitalize="none"
           value={oldPassword}
           onChangeText={setOldPassword}
         />
@@ -70,6 +71,7 @@ export default function ChangePasswordScreen() {
           label={t('new_password')}
           placeholder="••••••••"
           secureTextEntry
+          autoCapitalize="none"
           value={newPassword}
           onChangeText={setNewPassword}
         />
@@ -77,6 +79,7 @@ export default function ChangePasswordScreen() {
           label={t('confirm_new_password')}
           placeholder="••••••••"
           secureTextEntry
+          autoCapitalize="none"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />

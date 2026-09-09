@@ -91,6 +91,7 @@ export default function ChangePasswordScreen() {
             label="รหัสผ่านใหม่"
             placeholder="••••••••"
             secureTextEntry
+            autoCapitalize="none"
             value={newPassword}
             onChangeText={setNewPassword}
           />
@@ -99,6 +100,7 @@ export default function ChangePasswordScreen() {
             label="ยืนยันรหัสผ่านใหม่"
             placeholder="••••••••"
             secureTextEntry
+            autoCapitalize="none"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
