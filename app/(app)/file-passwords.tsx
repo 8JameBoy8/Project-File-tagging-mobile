@@ -49,6 +49,7 @@ function VerifyGate({ onVerified }: { onVerified: () => void }) {
           label={t('account_password')}
           placeholder="••••••••"
           secureTextEntry
+          autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
         />
@@ -104,7 +105,12 @@ export default function FilePasswordsScreen() {
         apiFetch<FileItem[]>('/api/files?hasPassword=true'),
         apiFetch<Tag[]>('/api/tags'),
       ]);
-      setFiles(filesData ?? []);
+      // sort ตาม tag แรกของแต่ละไฟล์ (ตรงกับฝั่งเว็บ — ดู src/app/user/filepassword/page.jsx)
+      // ไฟล์ที่ไม่มีแท็กเลยไปอยู่ท้ายสุด (เทียบกับ '￿' ซึ่งเรียงหลังตัวอักษรทุกตัวเสมอ)
+      const sorted = [...(filesData ?? [])].sort((a, b) =>
+        (a.tags[0] || '￿').localeCompare(b.tags[0] || '￿')
+      );
+      setFiles(sorted);
       const map: TagMap = {};
       (tagsData ?? []).forEach((item) => { map[item.name] = item; });
       setTagMap(map);
@@ -250,6 +256,7 @@ export default function FilePasswordsScreen() {
               label={t('new_password')}
               placeholder="••••••••"
               secureTextEntry
+              autoCapitalize="none"
               value={newFilePassword}
               onChangeText={setNewFilePassword}
             />
