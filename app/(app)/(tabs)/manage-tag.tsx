@@ -12,20 +12,21 @@ import {
   FlatList,
   ActivityIndicator,
   Modal,
-  Image,
 } from 'react-native';
-import { apiFetch, ApiError, resolveApiUrl } from '@/lib/api';
-import { getToken } from '@/lib/storage';
+import { apiFetch, ApiError } from '@/lib/api';
 import type { Tag, FileItem } from '@/types';
 import TextField from '@/components/TextField';
+import { AuthedThumbnail } from '@/components/AuthedThumbnail';
+import { useLanguage, type TranslationKey } from '@/context/LanguageContext';
 
 const NO_TAG_ID = '__no_tag__';
 
-const SORT_OPTIONS: { key: string; label: string }[] = [
-  { key: 'date-desc', label: 'ใหม่สุด' },
-  { key: 'date-asc', label: 'เก่าสุด' },
-  { key: 'type', label: 'ประเภทไฟล์' },
-  { key: 'name', label: 'ชื่อไฟล์' },
+// ค่า key คงที่ (ไม่แปล) แต่ label ต้องคำนวณจาก t() ตอน render เพื่อให้เปลี่ยนตามภาษาที่เลือกอยู่
+const SORT_KEYS: { key: string; labelKey: TranslationKey }[] = [
+  { key: 'date-desc', labelKey: 'sort_newest' },
+  { key: 'date-asc', labelKey: 'sort_oldest' },
+  { key: 'type', labelKey: 'sort_by_type' },
+  { key: 'name', labelKey: 'sort_by_name' },
 ];
 
 function fileIcon(type: FileItem['type']) {
@@ -36,24 +37,8 @@ function fileIcon(type: FileItem['type']) {
   return '📁';
 }
 
-// รูปที่ต้อง auth header ถึงจะโหลดได้ — RN <Image> รองรับ source.headers ตรงๆ ไม่ต้อง fetch
-// เป็น blob เอง (ต่างจากเว็บที่ <img src> ธรรมดาแนบ cookie ให้อัตโนมัติ)
-function AuthedThumbnail({ file }: { file: FileItem }) {
-  const [token, setToken] = useState<string | null>(null);
-  useEffect(() => {
-    getToken().then(setToken);
-  }, []);
-  if (!token) return <Text style={styles.cardIcon}>{fileIcon(file.type)}</Text>;
-  return (
-    <Image
-      source={{ uri: resolveApiUrl(file.src), headers: { Authorization: `Bearer ${token}` } }}
-      style={styles.thumbnailImage}
-      resizeMode="cover"
-    />
-  );
-}
-
 export default function ManageTagScreen() {
+  const { t } = useLanguage();
   const [tags, setTags] = useState<Tag[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selectedTagId, setSelectedTagId] = useState('');
@@ -121,13 +106,13 @@ export default function ManageTagScreen() {
 
   const handleDeleteTag = () => {
     if (!selectedTagId) {
-      Alert.alert('แจ้งเตือน', 'กรุณาเลือกแท็กที่ต้องการลบก่อน');
+      Alert.alert(t('notice_title'), t('manage_tag_select_tag_first'));
       return;
     }
-    Alert.alert('ยืนยันการลบ', `ต้องการลบแท็ก "${selectedTag?.name}" ใช่หรือไม่?`, [
-      { text: 'ยกเลิก', style: 'cancel' },
+    Alert.alert(t('confirm_delete_title'), t('manage_tag_confirm_delete_tag', { name: selectedTag?.name ?? '' }), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'ลบ',
+        text: t('delete_label'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -136,7 +121,7 @@ export default function ManageTagScreen() {
             loadTags();
             loadFiles();
           } catch (e) {
-            Alert.alert('ลบไม่สำเร็จ', e instanceof ApiError ? e.message : 'เกิดข้อผิดพลาด');
+            Alert.alert(t('manage_tag_delete_failed_title'), e instanceof ApiError ? e.message : t('generic_error_short'));
           }
         },
       },
@@ -153,7 +138,7 @@ export default function ManageTagScreen() {
       setIsEditing(false);
       loadTags();
     } catch (e) {
-      Alert.alert('บันทึกไม่สำเร็จ', e instanceof ApiError ? e.message : 'เกิดข้อผิดพลาด');
+      Alert.alert(t('manage_tag_save_failed_title'), e instanceof ApiError ? e.message : t('generic_error_short'));
     }
   };
 
@@ -174,7 +159,7 @@ export default function ManageTagScreen() {
 
   const startPickMode = () => {
     if (!selectedTagId) {
-      Alert.alert('แจ้งเตือน', 'กรุณาเลือกแท็กเป้าหมายก่อน (แตะปุ่มเลือกแท็กด้านบน)');
+      Alert.alert(t('notice_title'), t('manage_tag_select_tag_first'));
       return;
     }
     setPickMode(true);
@@ -199,7 +184,7 @@ export default function ManageTagScreen() {
 
   const handleConfirmAdd = async () => {
     if (selectedFileIds.size === 0) {
-      Alert.alert('แจ้งเตือน', 'กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์');
+      Alert.alert(t('notice_title'), t('manage_tag_select_one_file'));
       return;
     }
     setSaving(true);
@@ -212,24 +197,29 @@ export default function ManageTagScreen() {
       setSelectedFileIds(new Set());
       loadFiles();
     } catch (e) {
-      Alert.alert('เพิ่มไฟล์เข้าแท็กไม่สำเร็จ', e instanceof ApiError ? e.message : 'เกิดข้อผิดพลาด');
+      Alert.alert(t('manage_tag_add_failed_title'), e instanceof ApiError ? e.message : t('generic_error_short'));
     } finally {
       setSaving(false);
     }
   };
 
-  const sortLabel = SORT_OPTIONS.find((s) => s.key === sortMode)?.label ?? '';
+  const sortLabel = t(SORT_KEYS.find((s) => s.key === sortMode)?.labelKey ?? 'sort_newest');
 
   return (
     <View style={styles.container}>
       {/* ===== แถวควบคุมด้านบน: เลือก/แก้ไข/ลบแท็ก + เข้าโหมดเลือกไฟล์ ===== */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.tagPickerButton} onPress={() => setTagPickerVisible(true)}>
-          <Text style={styles.tagPickerText} numberOfLines={1}>
-            {selectedTag ? selectedTag.name : 'เลือกแท็กเพื่อเพิ่มไฟล์'}
-          </Text>
-          <Text style={styles.chevron}>▾</Text>
-        </TouchableOpacity>
+        {/* ซ่อนปุ่มเลือกแท็กตอนอยู่ใน pick mode — เลือกแท็กเป้าหมายล็อกไว้แล้วตอนกดเข้าโหมดนี้
+            ไม่ต้องโชว์ซ้ำ ให้พื้นที่แถวทั้งหมดกับปุ่มยืนยัน/ยกเลิกแทน (เดิมโชว์พร้อมกันสองฝั่ง ทำให้
+            ปุ่ม "ยกเลิก" ถูกดันตกขอบจอบนมือถือหน้าจอแคบ — เจอจริงตอนทดสอบบนเครื่อง) */}
+        {!pickMode && (
+          <TouchableOpacity style={styles.tagPickerButton} onPress={() => setTagPickerVisible(true)}>
+            <Text style={styles.tagPickerText} numberOfLines={1}>
+              {selectedTag ? selectedTag.name : t('manage_tag_select_prompt')}
+            </Text>
+            <Text style={styles.chevron}>▾</Text>
+          </TouchableOpacity>
+        )}
 
         {selectedTagId && !isEditing && !pickMode && (
           <>
@@ -248,12 +238,12 @@ export default function ManageTagScreen() {
 
         {pickMode && (
           <View style={styles.pickModeControls}>
-            <Text style={styles.pickCount}>{selectedFileIds.size} เลือกแล้ว</Text>
+            <Text style={styles.pickCount}>{t('manage_tag_selected_count', { count: selectedFileIds.size })}</Text>
             <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmAdd} disabled={saving}>
-              <Text style={styles.confirmBtnText}>{saving ? '...' : 'ยืนยัน'}</Text>
+              <Text style={styles.confirmBtnText}>{saving ? '...' : t('manage_tag_confirm_action')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={cancelPickMode}>
-              <Text style={styles.cancelBtnText}>ยกเลิก</Text>
+              <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -262,10 +252,10 @@ export default function ManageTagScreen() {
       {isEditing && (
         <View style={styles.editRow}>
           <View style={{ flex: 1 }}>
-            <TextField label="ชื่อ" placeholder="ชื่อแท็ก" value={editName} onChangeText={setEditName} />
+            <TextField label={t('manage_tag_name_label')} placeholder={t('create_tag_name_label')} value={editName} onChangeText={setEditName} />
           </View>
           <TextField
-            label="สี"
+            label={t('color_label')}
             placeholder="#rrggbb"
             value={editColor}
             onChangeText={setEditColor}
@@ -273,10 +263,10 @@ export default function ManageTagScreen() {
             style={{ width: 90 }}
           />
           <TouchableOpacity style={styles.confirmBtn} onPress={handleUpdateTag}>
-            <Text style={styles.confirmBtnText}>บันทึก</Text>
+            <Text style={styles.confirmBtnText}>{t('save')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditing(false)}>
-            <Text style={styles.cancelBtnText}>ยกเลิก</Text>
+            <Text style={styles.cancelBtnText}>{t('cancel')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -284,20 +274,20 @@ export default function ManageTagScreen() {
       {/* ===== แถว sort / filter / จำนวนไฟล์ ===== */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolbarBtn} onPress={() => setSortModalVisible(true)}>
-          <Text style={styles.toolbarBtnText}>เรียงตาม: {sortLabel}</Text>
+          <Text style={styles.toolbarBtnText}>{t('sort_label')}: {sortLabel}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.toolbarBtn} onPress={() => setFilterModalVisible(true)}>
-          <Text style={styles.toolbarBtnText}>กรองแท็ก</Text>
+          <Text style={styles.toolbarBtnText}>{t('filter_tag_label')}</Text>
           {activeTags.size > 0 && (
             <View style={styles.badge}><Text style={styles.badgeText}>{activeTags.size}</Text></View>
           )}
         </TouchableOpacity>
-        <Text style={styles.fileCountText}>{files.length} ไฟล์</Text>
+        <Text style={styles.fileCountText}>{t('files_count', { count: files.length })}</Text>
       </View>
 
       {pickMode && (
         <Text style={styles.pickHint}>
-          แตะไฟล์ด้านล่างเพื่อเลือกเข้าแท็ก {selectedTag ? `"${selectedTag.name}"` : ''}
+          {t('manage_tag_pick_hint', { name: selectedTag ? `"${selectedTag.name}"` : '' })}
         </Text>
       )}
 
@@ -312,7 +302,7 @@ export default function ManageTagScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.grid}
           columnWrapperStyle={styles.gridRow}
-          ListEmptyComponent={<Text style={styles.emptyText}>ไม่พบไฟล์</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('no_files_found')}</Text>}
           renderItem={({ item }) => {
             const alreadyTagged = !!selectedTag && item.tags.includes(selectedTag.name);
             const isSelected = selectedFileIds.has(item.id);
@@ -334,14 +324,14 @@ export default function ManageTagScreen() {
                 )}
                 {alreadyTagged && (
                   <View style={styles.taggedBadge}>
-                    <Text style={styles.taggedBadgeText}>มีแท็กนี้แล้ว</Text>
+                    <Text style={styles.taggedBadgeText}>{t('already_tagged_label')}</Text>
                   </View>
                 )}
                 <View style={styles.thumbnail}>
                   {item.hasPassword ? (
                     <Text style={styles.cardIcon}>🔒</Text>
                   ) : item.type === 'image' ? (
-                    <AuthedThumbnail file={item} />
+                    <AuthedThumbnail file={item} style={styles.thumbnailImage} />
                   ) : (
                     <Text style={styles.cardIcon}>{fileIcon(item.type)}</Text>
                   )}
@@ -364,9 +354,9 @@ export default function ManageTagScreen() {
       <Modal visible={tagPickerVisible} transparent animationType="slide" onRequestClose={() => setTagPickerVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setTagPickerVisible(false)}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>เลือกแท็ก</Text>
+            <Text style={styles.modalTitle}>{t('select_tag_title')}</Text>
             {tags.length === 0 ? (
-              <Text style={styles.emptyText}>ยังไม่มีแท็ก ไปสร้างที่หน้า Create Tag ก่อน</Text>
+              <Text style={styles.emptyText}>{t('manage_tag_create_tag_first')}</Text>
             ) : (
               tags.map((tag) => (
                 <TouchableOpacity
@@ -388,14 +378,14 @@ export default function ManageTagScreen() {
       <Modal visible={sortModalVisible} transparent animationType="slide" onRequestClose={() => setSortModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortModalVisible(false)}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>เรียงตาม</Text>
-            {SORT_OPTIONS.map((opt) => (
+            <Text style={styles.modalTitle}>{t('sort_label')}</Text>
+            {SORT_KEYS.map((opt) => (
               <TouchableOpacity
                 key={opt.key}
                 style={styles.modalRow}
                 onPress={() => { setSortMode(opt.key); setSortModalVisible(false); }}
               >
-                <Text style={[styles.modalRowText, sortMode === opt.key && styles.modalRowTextActive]}>{opt.label}</Text>
+                <Text style={[styles.modalRowText, sortMode === opt.key && styles.modalRowTextActive]}>{t(opt.labelKey)}</Text>
                 {sortMode === opt.key && <Text style={styles.modalRowCheck}>✓</Text>}
               </TouchableOpacity>
             ))}
@@ -407,22 +397,22 @@ export default function ManageTagScreen() {
       <Modal visible={filterModalVisible} transparent animationType="slide" onRequestClose={() => setFilterModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterModalVisible(false)}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>กรองตามแท็ก</Text>
+            <Text style={styles.modalTitle}>{t('filter_by_tag_title')}</Text>
             {tags.map((tag) => (
               <TouchableOpacity key={tag.id} style={styles.modalRow} onPress={() => toggleFilterTag(tag.id)}>
                 <View style={[styles.checkbox, activeTags.has(tag.id) && styles.checkboxChecked]} />
                 <Text style={styles.modalRowText}>{tag.name}</Text>
               </TouchableOpacity>
             ))}
-            {tags.length === 0 && <Text style={styles.emptyText}>ยังไม่มีแท็ก</Text>}
+            {tags.length === 0 && <Text style={styles.emptyText}>{t('no_tags_yet')}</Text>}
             <View style={styles.modalDivider} />
             <TouchableOpacity style={styles.modalRow} onPress={() => toggleFilterTag(NO_TAG_ID)}>
               <View style={[styles.checkbox, activeTags.has(NO_TAG_ID) && styles.checkboxChecked]} />
-              <Text style={styles.modalRowText}>ไฟล์ที่ไม่มีแท็ก</Text>
+              <Text style={styles.modalRowText}>{t('untagged_files_label')}</Text>
             </TouchableOpacity>
             <View style={styles.modalDivider} />
             <TouchableOpacity onPress={() => setActiveTags(new Set())}>
-              <Text style={styles.clearLink}>ล้างตัวกรอง</Text>
+              <Text style={styles.clearLink}>{t('clear_filter_link')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -453,7 +443,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', lineHeight: 20 },
 
-  pickModeControls: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  pickModeControls: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' },
   pickCount: { fontSize: 12, color: '#6b7280', flex: 1 },
   confirmBtn: { backgroundColor: '#dcfce7', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   confirmBtnText: { color: '#15803d', fontWeight: '700', fontSize: 13 },
