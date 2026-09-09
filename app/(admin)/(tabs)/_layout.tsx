@@ -1,15 +1,5 @@
 import { Tabs } from "expo-router";
-import { Text, StyleSheet } from "react-native";
-
-// สีเปลี่ยนตาม focused เพื่อให้เห็นชัดว่าอยู่แท็บไหน (ให้ตรงกับ tabBarActiveTintColor/
-// tabBarInactiveTintColor ด้านล่าง — ไอคอนตัวอักษรเฉยๆ ไม่ได้รับสีนี้อัตโนมัติ ต้องส่งเองตรงนี้)
-function TabIcon({ text, focused }: { text: string; focused: boolean }) {
-  return (
-    <Text style={[styles.icon, { color: focused ? "#176B34" : "#94A3B8" }]}>
-      {text}
-    </Text>
-  );
-}
+import { TabIcon } from "@/components/TabIcon";
 
 export default function AdminTabsLayout() {
   return (
@@ -40,7 +30,7 @@ export default function AdminTabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ focused }) => (
-            <TabIcon text="⌂" focused={focused} />
+            <TabIcon emoji="🏠" focused={focused} />
           ),
         }}
       />
@@ -50,7 +40,7 @@ export default function AdminTabsLayout() {
         options={{
           title: "Approve / Select",
           tabBarIcon: ({ focused }) => (
-            <TabIcon text="✓" focused={focused} />
+            <TabIcon emoji="✅" focused={focused} />
           ),
         }}
       />
@@ -60,16 +50,10 @@ export default function AdminTabsLayout() {
         options={{
           title: "Setting",
           tabBarIcon: ({ focused }) => (
-            <TabIcon text="⚙" focused={focused} />
+            <TabIcon emoji="⚙️" focused={focused} />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    fontSize: 20,
-  },
-});
