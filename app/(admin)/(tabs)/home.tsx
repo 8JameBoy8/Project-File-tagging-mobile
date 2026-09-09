@@ -15,7 +15,8 @@ import {
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import type { AdminUser, ModerationItem } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import type { AdminUser, FileItem, ModerationItem } from '@/types';
 
 type UsersResponse = {
   users: AdminUser[];
@@ -31,12 +32,26 @@ type ModerationResponse = {
   items: ModerationItem[];
 };
 
+type UserFilesResponse = {
+  files: FileItem[];
+};
+
 export default function AdminHomeScreen() {
   const { user } = useAuth();
+  // ตรงกับ pattern ที่หน้า Admin Setting ใช้อยู่แล้ว (isThai แบบ inline ternary ไม่ผ่านคีย์กลาง
+  // ของ LanguageContext) — หน้านี้เดิมเป็นภาษาอังกฤษล้วน ไม่เคยเชื่อมกับสวิตช์ภาษาเลย
+  const { language } = useLanguage();
+  const isThai = language === 'TH';
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  // moderation queue ทั้งระบบ — ใช้แค่โชว์ตัวเลขรวมใน stat card ด้านบน ("Files")
   const [files, setFiles] = useState<ModerationItem[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // ไฟล์จริงของ user ที่เลือกอยู่ (ตาราง File จริง ไม่ใช่ moderation queue — ดูคอมเมนต์ที่
+  // loadUserFiles ด้านล่างว่าทำไมต้องแยกจาก `files` ข้างบน)
+  const [userFiles, setUserFiles] = useState<FileItem[]>([]);
+  const [userFilesLoading, setUserFilesLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,7 +78,12 @@ export default function AdminHomeScreen() {
           ),
         ]);
 
-      const nextUsers = usersResponse.users ?? [];
+      // เอาบัญชี admin ที่ล็อกอินอยู่ตอนนี้ออกจากลิสต์ — หน้านี้มีไว้จัดการ "ผู้ใช้คนอื่น" ไม่ใช่
+      // ตัวเอง เห็นตัวเองโผล่ในลิสต์พร้อมปุ่มลบทำให้เข้าใจผิดว่าลบตัวเองได้ (ถึงจริงๆแล้ว backend
+      // กันไว้อยู่แล้ว ลบตัวเองไม่ได้แน่ๆ — ดู deleteUser() ด้านล่าง แต่ซ่อนไปเลยชัดเจนกว่า)
+      const nextUsers = (usersResponse.users ?? []).filter(
+        (item) => item.id !== user?.id
+      );
       const nextFiles = moderationResponse.items ?? [];
 
       setUsers(nextUsers);
@@ -93,13 +113,13 @@ export default function AdminHomeScreen() {
       setError(
         err instanceof Error
           ? err.message
-          : 'ไม่สามารถโหลดข้อมูลได้'
+          : (isThai ? 'ไม่สามารถโหลดข้อมูลได้' : 'Failed to load data')
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id, isThai]);
 
   useEffect(() => {
     loadData();
@@ -139,17 +159,17 @@ export default function AdminHomeScreen() {
     }
 
     Alert.alert(
-      'Delete User',
-      `ต้องการลบ ${getUserDisplayName(
-        selectedUser
-      )} หรือไม่?`,
+      isThai ? 'ลบผู้ใช้' : 'Delete User',
+      isThai
+        ? `ต้องการลบ ${getUserDisplayName(selectedUser)} หรือไม่?`
+        : `Delete ${getUserDisplayName(selectedUser)}?`,
       [
         {
-          text: 'Cancel',
+          text: isThai ? 'ยกเลิก' : 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: isThai ? 'ลบ' : 'Delete',
           style: 'destructive',
           onPress: () => deleteUser(),
         },
@@ -168,8 +188,8 @@ export default function AdminHomeScreen() {
      */
     if (selectedUser.id === user?.id) {
       Alert.alert(
-        'ไม่สามารถลบได้',
-        'ไม่สามารถลบบัญชีของตัวเองได้'
+        isThai ? 'ไม่สามารถลบได้' : 'Cannot Delete',
+        isThai ? 'ไม่สามารถลบบัญชีของตัวเองได้' : 'You cannot delete your own account'
       );
       return;
     }
@@ -208,17 +228,17 @@ export default function AdminHomeScreen() {
       });
 
       Alert.alert(
-        'สำเร็จ',
-        'ลบ User เรียบร้อยแล้ว'
+        isThai ? 'สำเร็จ' : 'Success',
+        isThai ? 'ลบ User เรียบร้อยแล้ว' : 'User deleted successfully'
       );
     } catch (err) {
       console.error('Delete user error:', err);
 
       Alert.alert(
-        'เกิดข้อผิดพลาด',
+        isThai ? 'เกิดข้อผิดพลาด' : 'Error',
         err instanceof Error
           ? err.message
-          : 'ไม่สามารถลบ User ได้'
+          : (isThai ? 'ไม่สามารถลบ User ได้' : 'Failed to delete user')
       );
     } finally {
       setDeleting(false);
@@ -227,25 +247,37 @@ export default function AdminHomeScreen() {
 
   /*
    * ============================================================
-   * CLICK FILE
+   * ไฟล์ของ user ที่เลือกอยู่
    * ============================================================
    *
-   * ไม่ต้องยิง API ใหม่
-   *
-   * moderation item มี uploader มาให้แล้ว
-   * จึงเปลี่ยน selectedUserId จาก uploader.id ได้เลย
+   * ใช้ GET /api/admin/user/[id]/files (ตาราง File จริง) แทน moderation queue —
+   * moderation queue เก็บ tagIds ไว้แค่ ณ ตอนอัปโหลดเท่านั้น ไม่อัปเดตตามหลังเวลา user ไป
+   * เพิ่ม/ลบแท็กทีหลังผ่านหน้า "จัดการแท็ก" เลยเจอว่าชื่อไฟล์/จำนวนแท็กที่โชว์ไม่ตรงกับความ
+   * เป็นจริงปัจจุบัน (เจอจริงตอนทดสอบ) endpoint นี้อ่านจากตาราง File ตรงๆ เลยตรงกับปัจจุบันเสมอ
    */
 
-  const handleFilePress = (
-    file: ModerationItem
-  ) => {
-    const uploaderId =
-      file.uploader?.id ?? file.uploadedBy;
-
-    if (uploaderId) {
-      setSelectedUserId(uploaderId);
+  const loadUserFiles = useCallback(async (userId: string) => {
+    setUserFilesLoading(true);
+    try {
+      const data = await apiFetch<UserFilesResponse>(
+        `/api/admin/user/${userId}/files`
+      );
+      setUserFiles(data.files ?? []);
+    } catch (err) {
+      console.error('Load user files error:', err);
+      setUserFiles([]);
+    } finally {
+      setUserFilesLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (selectedUserId) {
+      loadUserFiles(selectedUserId);
+    } else {
+      setUserFiles([]);
+    }
+  }, [selectedUserId, loadUserFiles]);
 
   /*
    * ============================================================
@@ -263,7 +295,7 @@ export default function AdminHomeScreen() {
           />
 
           <Text style={styles.loadingText}>
-            กำลังโหลดข้อมูล...
+            {isThai ? 'กำลังโหลดข้อมูล...' : 'Loading data...'}
           </Text>
         </View>
       </SafeAreaView>
@@ -281,7 +313,7 @@ export default function AdminHomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
           <Text style={styles.errorTitle}>
-            โหลดข้อมูลไม่สำเร็จ
+            {isThai ? 'โหลดข้อมูลไม่สำเร็จ' : 'Failed to load data'}
           </Text>
 
           <Text style={styles.errorText}>
@@ -293,7 +325,7 @@ export default function AdminHomeScreen() {
             onPress={loadData}
           >
             <Text style={styles.retryText}>
-              ลองใหม่
+              {isThai ? 'ลองใหม่' : 'Retry'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -326,11 +358,11 @@ export default function AdminHomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>
-              Admin Dashboard
+              {isThai ? 'แผงควบคุมแอดมิน' : 'Admin Dashboard'}
             </Text>
 
             <Text style={styles.headerSubtitle}>
-              Manage users and files
+              {isThai ? 'จัดการผู้ใช้และไฟล์' : 'Manage users and files'}
             </Text>
           </View>
 
@@ -352,7 +384,7 @@ export default function AdminHomeScreen() {
             </Text>
 
             <Text style={styles.statLabel}>
-              Users
+              {isThai ? 'ผู้ใช้' : 'Users'}
             </Text>
           </View>
 
@@ -362,7 +394,7 @@ export default function AdminHomeScreen() {
             </Text>
 
             <Text style={styles.statLabel}>
-              Files
+              {isThai ? 'ไฟล์' : 'Files'}
             </Text>
           </View>
         </View>
@@ -373,7 +405,7 @@ export default function AdminHomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Selected User
+            {isThai ? 'ผู้ใช้ที่เลือก' : 'Selected User'}
           </Text>
         </View>
 
@@ -391,7 +423,7 @@ export default function AdminHomeScreen() {
               </Text>
 
               <DetailRow
-                label="Email"
+                label={isThai ? 'อีเมล' : 'Email'}
                 value={getUserEmail(selectedUser)}
               />
 
@@ -401,21 +433,31 @@ export default function AdminHomeScreen() {
               />
 
               <DetailRow
-                label="Area"
-                value={getUserArea(selectedUser)}
-              />
-
-              <DetailRow
-                label="Files"
+                label={isThai ? 'ไฟล์' : 'Files'}
                 value={String(
                   getUserFileCount(selectedUser)
                 )}
               />
 
               <DetailRow
-                label="Storage"
-                value={getUserStorage(selectedUser)}
+                label={isThai ? 'พื้นที่ใช้งาน' : 'Storage'}
+                value={formatBytes(selectedUser.storageUsedBytes)}
               />
+
+              <View style={styles.tagsDetailRow}>
+                <Text style={styles.detailLabel}>{isThai ? 'แท็ก' : 'Tags'}</Text>
+                <View style={styles.tagsDetailChips}>
+                  {selectedUser.tags.length === 0 ? (
+                    <Text style={styles.detailValue}>-</Text>
+                  ) : (
+                    selectedUser.tags.map((tagName) => (
+                      <View key={tagName} style={styles.tagChipSmall}>
+                        <Text style={styles.tagChipSmallText}>{tagName}</Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -433,7 +475,7 @@ export default function AdminHomeScreen() {
                 />
               ) : (
                 <Text style={styles.deleteText}>
-                  Delete
+                  {isThai ? 'ลบ' : 'Delete'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -441,7 +483,7 @@ export default function AdminHomeScreen() {
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              ยังไม่มี User
+              {isThai ? 'ยังไม่มี User' : 'No users yet'}
             </Text>
           </View>
         )}
@@ -452,11 +494,11 @@ export default function AdminHomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Users
+            {isThai ? 'ผู้ใช้' : 'Users'}
           </Text>
 
           <Text style={styles.sectionCount}>
-            {users.length} users
+            {isThai ? `${users.length} คน` : `${users.length} users`}
           </Text>
         </View>
 
@@ -511,40 +553,44 @@ export default function AdminHomeScreen() {
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              ไม่พบ User
+              {isThai ? 'ไม่พบ User' : 'No users found'}
             </Text>
           </View>
         )}
 
         {/* =====================================================
-            ALL FILES
+            FILES OF SELECTED USER
+            (ไฟล์จริงของ user ที่เลือกอยู่ด้านบน — ไม่ใช่ไฟล์ของทุกคนแล้ว
+            เดิมกดไฟล์เพื่อสลับ selected user แต่ผู้ใช้งานจริงมองว่าย้อนทางและซ้ำซ้อน
+            เพราะเลือก user ได้จากลิสต์ Users ด้านบนอยู่แล้ว)
         ===================================================== */}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            All Files
+            {selectedUser
+              ? (isThai
+                  ? `ไฟล์ของ ${getUserDisplayName(selectedUser)}`
+                  : `Files of ${getUserDisplayName(selectedUser)}`)
+              : (isThai ? 'ไฟล์' : 'Files')}
           </Text>
 
           <Text style={styles.sectionCount}>
-            {files.length} files
+            {isThai ? `${userFiles.length} ไฟล์` : `${userFiles.length} files`}
           </Text>
         </View>
 
-        {files.length > 0 ? (
-          files.map((file) => (
-            <TouchableOpacity
-              key={file.id}
-              style={styles.fileCard}
-              onPress={() =>
-                handleFilePress(file)
-              }
-              activeOpacity={0.75}
-            >
+        {userFilesLoading ? (
+          <View style={styles.emptyCard}>
+            <ActivityIndicator size="small" />
+          </View>
+        ) : userFiles.length > 0 ? (
+          userFiles.map((file) => (
+            <View key={file.id} style={styles.fileCard}>
               <View style={styles.fileIcon}>
                 <Text
                   style={styles.fileIconText}
                 >
-                  {getFileType(file)}
+                  {file.ext}
                 </Text>
               </View>
 
@@ -553,30 +599,28 @@ export default function AdminHomeScreen() {
                   style={styles.fileName}
                   numberOfLines={1}
                 >
-                  {getFileName(file)}
+                  {file.name}
                 </Text>
 
                 <Text
                   style={styles.fileMeta}
                   numberOfLines={2}
                 >
-                  {getUploaderName(file)}
+                  {formatBytes(file.size)}
                   {' • '}
-                  {getFileSize(file)}
-                  {' • '}
-                  {getTagCount(file)} tags
+                  {file.tags.length > 0
+                    ? file.tags.join(', ')
+                    : (isThai ? 'ไม่มีแท็ก' : 'no tags')}
                 </Text>
               </View>
-
-              <Text style={styles.arrow}>
-                ›
-              </Text>
-            </TouchableOpacity>
+            </View>
           ))
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              ไม่พบไฟล์
+              {selectedUser
+                ? (isThai ? 'ยังไม่มีไฟล์' : 'No files yet')
+                : (isThai ? 'ไม่พบไฟล์' : 'No files found')}
             </Text>
           </View>
         )}
@@ -650,16 +694,6 @@ function getUserEmail(
   return item.email ?? '-';
 }
 
-function getUserArea(
-  user: AdminUser
-): string {
-  const item = user as AdminUser & {
-    area?: string;
-  };
-
-  return item.area ?? '-';
-}
-
 function getUserFileCount(
   user: AdminUser
 ): number {
@@ -679,21 +713,19 @@ function getUserFileCount(
   );
 }
 
-function getUserStorage(
-  user: AdminUser
-): string {
-  const item = user as AdminUser & {
-    storage?: string | number;
-  };
-
-  if (
-    item.storage === undefined ||
-    item.storage === null
-  ) {
-    return '-';
+// แปลง byte เป็น B/KB/MB/GB อ่านง่าย — เดิมมี getUserStorage() ที่มองหา field ชื่อ "storage" ซึ่งไม่มี
+// อยู่จริงใน response (field จริงคือ storageUsedBytes ตัวเลข byte ตรงๆ — ดู AdminUser ใน types/index.ts
+// และ src/app/api/admin/user/route.ts ฝั่งเว็บ) เลยได้ "-" ตลอดไม่ว่า user จะมีไฟล์แค่ไหนก็ตาม
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  let value = bytes;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i++;
   }
-
-  return String(item.storage);
+  return `${value.toFixed(1)} ${units[i]}`;
 }
 
 function getUserInitial(
@@ -702,128 +734,6 @@ function getUserInitial(
   const name = getUserDisplayName(user);
 
   return name.charAt(0).toUpperCase();
-}
-
-function getFileName(
-  file: ModerationItem
-): string {
-  const item = file as ModerationItem & {
-    name?: string;
-    filename?: string;
-    originalName?: string;
-  };
-
-  return (
-    item.name ??
-    item.filename ??
-    item.originalName ??
-    'Unnamed file'
-  );
-}
-
-function getFileType(
-  file: ModerationItem
-): string {
-  const item = file as ModerationItem & {
-    type?: string;
-    mimeType?: string;
-    fileType?: string;
-  };
-
-  const type =
-    item.type ??
-    item.fileType ??
-    item.mimeType ??
-    'FILE';
-
-  if (type.includes('/')) {
-    return (
-      type
-        .split('/')
-        .pop()
-        ?.toUpperCase() ?? 'FILE'
-    );
-  }
-
-  return type.toUpperCase();
-}
-
-function getFileSize(
-  file: ModerationItem
-): string {
-  const item = file as ModerationItem & {
-    size?: string | number;
-    fileSize?: string | number;
-  };
-
-  if (
-    item.size !== undefined &&
-    item.size !== null
-  ) {
-    return String(item.size);
-  }
-
-  if (
-    item.fileSize !== undefined &&
-    item.fileSize !== null
-  ) {
-    return String(item.fileSize);
-  }
-
-  return '-';
-}
-
-function getTagCount(
-  file: ModerationItem
-): number {
-  const item = file as ModerationItem & {
-    tags?: number | unknown[];
-    tagIds?: string;
-  };
-
-  if (typeof item.tags === 'number') {
-    return item.tags;
-  }
-
-  if (Array.isArray(item.tags)) {
-    return item.tags.length;
-  }
-
-  if (item.tagIds) {
-    try {
-      const parsed = JSON.parse(
-        item.tagIds
-      );
-
-      if (Array.isArray(parsed)) {
-        return parsed.length;
-      }
-    } catch {
-      return 0;
-    }
-  }
-
-  return 0;
-}
-
-function getUploaderName(
-  file: ModerationItem
-): string {
-  const item = file as ModerationItem & {
-    uploader?: {
-      id?: string;
-      displayName?: string;
-      email?: string;
-    };
-    uploadedBy?: string;
-  };
-
-  return (
-    item.uploader?.displayName ??
-    item.uploader?.email ??
-    item.uploadedBy ??
-    'Unknown User'
-  );
 }
 
 /*
@@ -1042,6 +952,30 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#334155',
+  },
+
+  tagsDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 6,
+    minHeight: 30,
+  },
+  tagsDetailChips: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tagChipSmall: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  tagChipSmallText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#4F46E5',
   },
 
   deleteButton: {

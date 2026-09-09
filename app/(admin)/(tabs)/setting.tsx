@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -20,8 +22,11 @@ type StatsResponse = {
 };
 
 export default function AdminSettingScreen() {
-  const { user, logout } = useAuth();
+  // avatarUri มาจาก context เดียวกับที่หน้า (app)/profile.tsx ใช้ — ตั้งรูปจากหน้านั้นแล้วจะขึ้นที่
+  // นี่ทันทีโดยไม่ต้องทำอะไรเพิ่ม เพราะ context กลางตัวเดียวกันทั้งแอป ไม่ได้แยกกันระหว่าง user/admin
+  const { user, logout, avatarUri } = useAuth();
   const { language, setLanguage } = useLanguage();
+  const router = useRouter();
 
   const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -83,26 +88,43 @@ export default function AdminSettingScreen() {
       style={styles.screen}
       contentContainerStyle={styles.content}
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(user?.displayName ?? 'A')
-              .charAt(0)
-              .toUpperCase()}
-          </Text>
-        </View>
+      {/* HEADER — แตะเพื่อไปหน้าแก้ไขโปรไฟล์ (ใช้หน้าเดียวกับฝั่ง user เลย ดูคอมเมนต์ที่
+          import useRouter ด้านบน) เดิมชื่อ/รูปโปรไฟล์ของ admin แก้ไม่ได้เลย เพราะหน้านี้ไม่เคยมี
+          ทางเข้าไปหน้าแก้โปรไฟล์ (ต่างจากฝั่ง user ที่มีปุ่มนี้อยู่แล้ว) */}
+      <Pressable
+        style={styles.header}
+        onPress={() => router.push('/(app)/profile')}
+      >
+        {avatarUri ? (
+          <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {(user?.displayName || user?.email || '?')
+                .charAt(0)
+                .toUpperCase()}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.headerInfo}>
           <Text style={styles.title}>
             {isThai ? 'Admin Setting' : 'Admin Setting'}
           </Text>
 
+          <Text style={styles.adminName}>
+            {user?.displayName || (isThai ? 'ยังไม่ได้ตั้งชื่อ' : 'No name set')}
+          </Text>
+
           <Text style={styles.email}>
             {user?.email ?? '-'}
           </Text>
+
+          <Text style={styles.editProfileHint}>
+            {isThai ? 'แตะเพื่อแก้ไขโปรไฟล์ ›' : 'Tap to edit profile ›'}
+          </Text>
         </View>
-      </View>
+      </Pressable>
 
       {/* LANGUAGE */}
       <View style={styles.card}>
@@ -198,7 +220,7 @@ export default function AdminSettingScreen() {
           </Text>
 
           <Text style={styles.accountValue}>
-            {user?.displayName ?? '-'}
+            {user?.displayName || (isThai ? 'ยังไม่ได้ตั้งชื่อ' : 'No name set')}
           </Text>
         </View>
 
@@ -287,6 +309,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+
   headerInfo: {
     flex: 1,
     marginLeft: 14,
@@ -298,10 +326,24 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
 
+  adminName: {
+    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+  },
+
   email: {
     marginTop: 4,
     color: '#64748B',
     fontSize: 12,
+  },
+
+  editProfileHint: {
+    marginTop: 6,
+    color: '#4F46E5',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   card: {
