@@ -39,7 +39,8 @@
       "expo-secure-store",
       "expo-sharing",
       "expo-video",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "extra": {
       "router": {},
