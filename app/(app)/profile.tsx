@@ -1,5 +1,5 @@
 // app/(app)/profile.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -50,9 +50,14 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadStorage();
-  }, [loadStorage]);
+  // เดิมโหลด storage แค่ตอน mount ครั้งเดียว — อัปโหลดไฟล์จากแท็บ Upload แล้วสลับกลับมาหน้านี้
+  // ตัวเลขจะค้างเป็นค่าเก่า (เจอจริงฝั่งเว็บ: "เพิ่มไฟล์แล้วพื้นที่ไม่ขึ้น") — refetch ทุกครั้งที่
+  // หน้านี้กลับมา focus ด้วย
+  useFocusEffect(
+    useCallback(() => {
+      loadStorage();
+    }, [loadStorage])
+  );
 
   // ฟังก์ชันเลือกรูปจากคลังภาพ
   const handlePickImage = async () => {

@@ -147,6 +147,12 @@ const translations = {
     manage_tag_save_failed_title: 'บันทึกไม่สำเร็จ',
     manage_tag_pick_hint: 'แตะไฟล์ด้านล่างเพื่อเลือกเข้าแท็ก {name}',
     manage_tag_create_tag_first: 'ยังไม่มีแท็ก ไปสร้างที่หน้า Create Tag ก่อน',
+    manage_tag_file_tags_title: 'แท็กของไฟล์นี้',
+    manage_tag_tap_tag_to_remove: 'แตะแท็กเพื่อเอาออกจากไฟล์',
+    manage_tag_no_tags_on_file: 'ไฟล์นี้ยังไม่มีแท็ก',
+    manage_tag_remove_tag_confirm: 'เอาแท็ก "{name}" ออกจากไฟล์นี้?',
+    manage_tag_remove_tag_action: 'เอาออก',
+    manage_tag_remove_failed_title: 'เอาแท็กออกไม่สำเร็จ',
 
     // Home Screen
     home_locked_msg: 'ไฟล์นี้ต้องใส่รหัสผ่านก่อนดู',
@@ -321,6 +327,12 @@ const translations = {
     manage_tag_save_failed_title: 'Failed to save',
     manage_tag_pick_hint: 'Tap files below to add them to tag {name}',
     manage_tag_create_tag_first: 'No tags yet — create one on the Create Tag page first',
+    manage_tag_file_tags_title: 'Tags on this file',
+    manage_tag_tap_tag_to_remove: 'Tap a tag to remove it from this file',
+    manage_tag_no_tags_on_file: 'This file has no tags yet',
+    manage_tag_remove_tag_confirm: 'Remove tag "{name}" from this file?',
+    manage_tag_remove_tag_action: 'Remove',
+    manage_tag_remove_failed_title: 'Failed to remove tag',
 
     // Home Screen
     home_locked_msg: 'This file requires a password to view',

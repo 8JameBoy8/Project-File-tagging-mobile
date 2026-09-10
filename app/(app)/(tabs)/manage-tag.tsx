@@ -58,7 +58,18 @@ export default function ManageTagScreen() {
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
+  // ไฟล์ที่กำลังเปิดดู/ถอดแท็กอยู่ (แตะการ์ดไฟล์ตอนไม่ได้อยู่ pick mode) — เดิมไม่มีทางถอดแท็ก
+  // ออกจากไฟล์เลยทั้งที่ backend (PUT /api/files/[id]/tags) รองรับ ตรงกับที่เพิ่งเพิ่มฝั่งเว็บ
+  const [fileTagsModalId, setFileTagsModalId] = useState<string | null>(null);
+  const [removingTag, setRemovingTag] = useState(false);
+
   const selectedTag = useMemo(() => tags.find((t) => t.id === selectedTagId), [tags, selectedTagId]);
+
+  // ดึงไฟล์ตัวปัจจุบันจาก state `files` ด้วย id เสมอ เพื่อให้ modal โชว์ list แท็กล่าสุดหลังถอดแท็กออก
+  const fileTagsModalFile = useMemo(
+    () => files.find((f) => f.id === fileTagsModalId) ?? null,
+    [files, fileTagsModalId]
+  );
 
   const loadTags = useCallback(async () => {
     try {
@@ -203,6 +214,43 @@ export default function ManageTagScreen() {
     }
   };
 
+  // ถอดแท็ก 1 อันออกจากไฟล์ — PUT ทั้ง list แท็กที่เหลือกลับไป (endpoint นี้ replace ทั้งชุด
+  // ไม่ได้ลบทีละอัน) เหมือน handleRemoveTagFromFile ฝั่งเว็บ
+  const handleRemoveTagFromFile = (file: FileItem, tagName: string) => {
+    Alert.alert(
+      t('manage_tag_remove_tag_action'),
+      t('manage_tag_remove_tag_confirm', { name: tagName }),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('manage_tag_remove_tag_action'),
+          style: 'destructive',
+          onPress: async () => {
+            const remainingTagIds = file.tags
+              .filter((name) => name !== tagName)
+              .map((name) => tags.find((tg) => tg.name === name)?.id)
+              .filter((id): id is string => !!id);
+            setRemovingTag(true);
+            try {
+              await apiFetch(`/api/files/${file.id}/tags`, {
+                method: 'PUT',
+                body: { tagIds: remainingTagIds },
+              });
+              await loadFiles();
+            } catch (e) {
+              Alert.alert(
+                t('manage_tag_remove_failed_title'),
+                e instanceof ApiError ? e.message : t('generic_error_short')
+              );
+            } finally {
+              setRemovingTag(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const sortLabel = t(SORT_KEYS.find((s) => s.key === sortMode)?.labelKey ?? 'sort_newest');
 
   return (
@@ -313,9 +361,9 @@ export default function ManageTagScreen() {
                   isSelected && styles.fileCardSelected,
                   pickMode && alreadyTagged && styles.fileCardDisabled,
                 ]}
-                onPress={() => toggleFileSelection(item)}
-                disabled={!pickMode || alreadyTagged}
-                activeOpacity={pickMode && !alreadyTagged ? 0.7 : 1}
+                onPress={() => (pickMode ? toggleFileSelection(item) : setFileTagsModalId(item.id))}
+                disabled={pickMode && alreadyTagged}
+                activeOpacity={0.7}
               >
                 {pickMode && (
                   <View style={[styles.selectDot, isSelected && styles.selectDotActive]}>
@@ -417,6 +465,43 @@ export default function ManageTagScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* ===== Modal: แท็กของไฟล์ (แตะเพื่อถอดออก) ===== */}
+      <Modal
+        visible={fileTagsModalFile !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFileTagsModalId(null)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFileTagsModalId(null)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {fileTagsModalFile?.name}
+            </Text>
+            <Text style={styles.modalSubtitle}>{t('manage_tag_file_tags_title')}</Text>
+            {fileTagsModalFile && fileTagsModalFile.tags.length > 0 ? (
+              <>
+                <Text style={styles.pickHint}>{t('manage_tag_tap_tag_to_remove')}</Text>
+                <View style={styles.fileTagWrap}>
+                  {fileTagsModalFile.tags.map((tagName) => (
+                    <TouchableOpacity
+                      key={tagName}
+                      style={styles.fileTagChip}
+                      disabled={removingTag}
+                      onPress={() => handleRemoveTagFromFile(fileTagsModalFile, tagName)}
+                    >
+                      <Text style={styles.fileTagChipText}>{tagName}</Text>
+                      <Text style={styles.fileTagChipX}>✕</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>{t('manage_tag_no_tags_on_file')}</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -500,6 +585,14 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 32, maxHeight: '70%' },
   modalTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 10 },
+  modalSubtitle: { fontSize: 12, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  fileTagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  fileTagChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f1f5f9',
+    borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 20, paddingLeft: 12, paddingRight: 10, paddingVertical: 7,
+  },
+  fileTagChipText: { fontSize: 13, color: '#111', fontWeight: '600' },
+  fileTagChipX: { fontSize: 12, color: '#dc2626', fontWeight: '800' },
   modalRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   modalRowText: { flex: 1, fontSize: 14, color: '#111' },
   modalRowTextActive: { color: '#0284c7', fontWeight: '700' },
